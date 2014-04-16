@@ -1,5 +1,5 @@
 /*
-	W.A.L.T.E.R. 2.0: Navigation and basic sensor reaction behaviors sketch.
+	W.A.L.T.E.R. 2.0: Motor and Sensor Test sketch.
 	Copyright (C) 2013 Dale A. Weber <hybotics.pdx@gmail.com>
 
 	This program is free software: you can redistribute it and/or modify
@@ -17,12 +17,11 @@
 */
 
 /*
-	Program:		W.A.L.T.E.R. 2.0, Main navigation and reactive behaviors sketch
-	Date:			15-Apr-2014
-	Version:		0.5.0 Arduino Mega ADK - ALPHA
+	Program:		W.A.L.T.E.R. 2.0, Motor and Sensor Test sketch
+	Date:			16-Apr-2014
+	Version:		0.0.1 Arduino Mega ADK - ALPHA
 
-	Purpose:		To handle the navigation and navigation related sensor subsystem for
-					W.A.L.T.E.R. 2.0
+	Purpose:		To test motors and sensors for W.A.L.T.E.R. 2.0
 						
 	Dependencies:	Adafruit libraries:
 						Adafruit_Sensor and Adafruit_L3GD20 libraries.
@@ -55,12 +54,11 @@
 #include <BMSerial.h>
 #include <RoboClaw.h>
 
-
 /*
 	Additional libraries
 */
 
-#include "Navigation_Main.h"
+#include "Motor_Sensor_Test.h"
 #include "Pitches.h"
 
 /********************************************************************/
@@ -1408,7 +1406,7 @@ void setup (void) {
 	console.begin(9600);
 
 	console.println();
-	console.print(F("W.A.L.T.E.R. 2.0 Navigation, version "));
+	console.print(F("W.A.L.T.E.R. 2.0 Motor and Sensor Tester, version "));
 	console.print(BUILD_VERSION);
 	console.print(F(" on "));
 	console.print(BUILD_DATE);
@@ -1432,13 +1430,14 @@ void setup (void) {
 	digitalWrite(HEARTBEAT_LED, LOW);
 
 	//	Initialize all sensors
-	initSensors();
+//	initSensors();
 
 	//	Initialize all servos
 	initServos(&gripLift, &gripWrist, &gripGrab, &pan, &tilt);
 
 	//	Set the Pan/Tilt to home position
 	initPanTilt(&pan, &tilt);
+
 
 	//	Scan the entire 180 degree range and take sensor readings every 10 degrees
 	console.println(F("Doing initial area scan.."));
@@ -1522,51 +1521,6 @@ void loop (void) {
 		firstLoop = false;
 	}
 
-//	console.println(F("Getting Accelerometer Readings.."));
-
-	/*
-		Get accelerometer readings
-	*/
-	accelerometer.getEvent(&accelEvent);
- 
-	accelX = accelEvent.acceleration.x;
-	accelY = accelEvent.acceleration.y;
-	accelZ = accelEvent.acceleration.z;
-
-	/*
-		Get compass readings
-	*/
-//	console.println(F("Getting Magnetometer (Compass) Readings.."));
-
-	compass.getEvent(&compassEvent);
-
-	compassX = compassEvent.magnetic.x;
-	compassY = compassEvent.magnetic.y;
-	compassZ = compassEvent.magnetic.z;
-
-	/*
-		Get gyro readings
-	*/
-//	console.println(F("Getting Gyroscope Readings.."));
-
-	gyroscope.read();
-
-	gyroX = (int)gyroscope.data.x;
-	gyroY = (int)gyroscope.data.y;
-	gyroZ = (int)gyroscope.data.z;
-
-//	console.println(F("Getting Orientation readings.."));
-
-	/*
-		Get pitch, roll, and heading information
-	*/
-
-	//	Calculate pitch and roll from the raw accelerometer data
-	pitchRollValid = imu.accelGetOrientation(&accelEvent, &orientation);
-
-	//	Calculate the heading using the magnetometer (compass)
-	headingValid = imu.magGetOrientation(SENSOR_AXIS_Z, &compassEvent, &orientation);
-
 	if (ROBOCLAW_CONTROLLERS > 0) {
 		/*
 			Read the RoboClaw 2x5 motor data
@@ -1645,7 +1599,7 @@ void loop (void) {
 		lastMinute = currentMinute;
 	}
 
-	displayIMUReadings (&accelEvent, &compassEvent, &orientation, pitchRollValid, headingValid, tempEvent.pressure, celsius, fahrenheit, gyroX, gyroY, gyroZ);
+//	displayIMUReadings (&accelEvent, &compassEvent, &orientation, pitchRollValid, headingValid, tempEvent.pressure, celsius, fahrenheit, gyroX, gyroY, gyroZ);
 
 	wait(WAIT_DELAY_SECONDS);
 

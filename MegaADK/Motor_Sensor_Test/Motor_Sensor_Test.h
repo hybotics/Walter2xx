@@ -19,7 +19,7 @@
 /*
 	Program:      	W.A.L.T.E.R. 2.0, Main navigation, and reactive behaviors, header file
 	Date:         	15-Apr-2014
-	Version:      	0.5.0 Arduino Mega ADK - ALPHA
+	Version:      	0.0.1 Arduino Mega ADK - ALPHA
 
 	Purpose:		Added definitions for SoftwareSerial ports for the SSC-32 and RoboClaw 2x5
 
@@ -42,7 +42,7 @@
 
 #define	NAV_I2C_ADDRESS					0x50
 
-#define	BUILD_VERSION					"0.5.0"
+#define	BUILD_VERSION					"0.0.1"
 #define	BUILD_DATE 						"15-Apr-2014"
 #define	BUILD_BOARD						"Arduino Mega ADK"
 
@@ -78,12 +78,20 @@
 
 #define	IR_PIN_BASE						6			//	Analog 6
 #define	PING_PIN_BASE					24			//	Digital 24
+#define PIR_MOTION_PIN_BASE				30 			//	Digital 30
 
 #define	MAX_NUMBER_PING					1
 
 #define	PING_FRONT_CENTER				0
 #define	PING_FRONT_LEFT					1
 #define	PING_FRONT_RIGHT				2
+
+#define MAX_NUMBER_PIR_MOTION			2
+
+#define	PIR_FRONT_LEFT					0
+#define	PIR_FRONT_RIGHT					1
+#define	PIR_BACK_LEFT					2
+#define	PIR_BACK_RIGHT					3
 
 #define	MAX_NUMBER_IR					1
 
