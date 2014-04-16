@@ -78,12 +78,20 @@
 
 #define	IR_PIN_BASE						6			//	Analog 6
 #define	PING_PIN_BASE					24			//	Digital 24
+#define PIR_MOTION_PIN_BASE				30 			//	Digital 30
 
 #define	MAX_NUMBER_PING					1
 
 #define	PING_FRONT_CENTER				0
 #define	PING_FRONT_LEFT					1
 #define	PING_FRONT_RIGHT				2
+
+#define MAX_NUMBER_PIR_MOTION			2
+
+#define	PIR_FRONT_LEFT					0
+#define	PIR_FRONT_RIGHT					1
+#define	PIR_BACK_LEFT					2
+#define	PIR_BACK_RIGHT					3
 
 #define	MAX_NUMBER_IR					1
 
