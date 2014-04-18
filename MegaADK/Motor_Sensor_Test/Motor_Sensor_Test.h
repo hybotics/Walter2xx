@@ -18,8 +18,8 @@
 
 /*
 	Program:      	W.A.L.T.E.R. 2.0, Main navigation, and reactive behaviors, header file
-	Date:         	15-Apr-2014
-	Version:      	0.0.1 Arduino Mega ADK - ALPHA
+	Date:         	16-Apr-2014
+	Version:      	0.0.2 Arduino Mega ADK - ALPHA
 
 	Purpose:		Added definitions for SoftwareSerial ports for the SSC-32 and RoboClaw 2x5
 
@@ -42,8 +42,8 @@
 
 #define	NAV_I2C_ADDRESS					0x50
 
-#define	BUILD_VERSION					"0.0.1"
-#define	BUILD_DATE 						"15-Apr-2014"
+#define	BUILD_VERSION					"0.0.2"
+#define	BUILD_DATE 						"16-Apr-2014"
 #define	BUILD_BOARD						"Arduino Mega ADK"
 
 #define	COLOR_SENSOR_LED				53
@@ -111,7 +111,8 @@
 
 #define ROBOCLAW_MOTOR_LEFT_NAME		"Left"
 #define ROBOCLAW_MOTOR_RIGHT_NAME		"Right"
-
+#define ROBOCLAW_MOTOR_FRONT_NAME		"Front"
+#define ROBOCLAW_MOTOR_BACK_NAME		"Back"
 
 //  For SoftI2CMaster
 #define	SOFT_I2C_SDA_PIN				2

@@ -19,7 +19,7 @@
 /*
 	Program:		W.A.L.T.E.R. 2.0, Motor and Sensor Test sketch
 	Date:			16-Apr-2014
-	Version:		0.0.1 Arduino Mega ADK - ALPHA
+	Version:		0.0.2 Arduino Mega ADK - ALPHA
 
 	Purpose:		To test motors and sensors for W.A.L.T.E.R. 2.0
 						
@@ -1455,12 +1455,47 @@ void setup (void) {
 
 	console.println();
 
+	/*
+		Do we have any RoboClaw motor controllers to setup?
+	*/
 	if (ROBOCLAW_CONTROLLERS > 0) {
-		//	Initialize the RoboClaw 2x5 motor controller port
+		//	Initialize the first RoboClaw 2x5 motor controller at address 0x80
 		initRoboClaw(roboClawAddress1, 38400, &leftMotorM1, &rightMotorM2);
 
-		//	Let's see if we can move
+		//	Start the motors, both forward.
+		console.println(F("Both motors forward"));
 		setMotors(roboClawAddress1, 100, 100, &leftMotorM1, &rightMotorM2);
+		delay(5000);
+
+		//	Stop the motors!
+		setMotors(roboClawAddress1, 0, 0, &leftMotorM1, &rightMotorM2);
+		delay(2000);
+
+		//	Left motor foward, right motor reverse
+		console.println(F("Left motor forward, right motor reverse"));
+		setMotors(roboClawAddress1, 100, -100, &leftMotorM1, &rightMotorM2);
+		delay(5000);
+
+		//	Stop the motors!
+		setMotors(roboClawAddress1, 0, 0, &leftMotorM1, &rightMotorM2);
+		delay(2000);
+
+		//	Left motor reverse, right motor forward
+		console.println(F("Left motor reverse, right motor forward"));
+		setMotors(roboClawAddress1, -100, 100, &leftMotorM1, &rightMotorM2);
+		delay(5000);
+
+		//	Stop the motors!
+		setMotors(roboClawAddress1, 0, 0, &leftMotorM1, &rightMotorM2);
+		delay(2000);
+
+		//	Both motors reverse
+		console.println(F("Both motors reverse"));
+		setMotors(roboClawAddress1, -100, -100, &leftMotorM1, &rightMotorM2);
+		delay(5000);
+
+		//	Stop the motors!
+		setMotors(roboClawAddress1, 0, 0, &leftMotorM1, &rightMotorM2);
 	}
 }
 

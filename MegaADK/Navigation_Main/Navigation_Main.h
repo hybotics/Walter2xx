@@ -111,7 +111,8 @@
 
 #define ROBOCLAW_MOTOR_LEFT_NAME		"Left"
 #define ROBOCLAW_MOTOR_RIGHT_NAME		"Right"
-
+#define ROBOCLAW_MOTOR_FRONT_NAME		"Front"
+#define ROBOCLAW_MOTOR_BACK_NAME		"Back"
 
 //  For SoftI2CMaster
 #define	SOFT_I2C_SDA_PIN				2
