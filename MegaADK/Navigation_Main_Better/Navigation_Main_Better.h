@@ -16,8 +16,8 @@
 				Copyright (C) 2013 Dale Weber <hybotics.pdx@gmail.com>.
 */
 
-#ifndef	__MOTOR_SERVO_TEST_H__
-#define	__MOTOR_SERVO_TEST_H__
+#ifndef	__NAVIGATION_MAIN_BETTER_H__
+#define	__NAVIGATION_MAIN_BETTER_H__
 
 /*********************************************************/
 /*	General settings 									 */
@@ -27,7 +27,7 @@
 
 #define	BUILD_VERSION					"0.2.1"
 #define	BUILD_DATE 						"20-Apr-2014"
-#define	BUILD_BOARD						"Arduino Mega 2560 R3, with Lynxmotion's SSC-32"
+#define	BUILD_BOARD						"Arduino Mega 2560 ADK, with Lynxmotion's SSC-32"
 
 #define	LOOP_DELAY_SECONDS				10
 
@@ -36,7 +36,7 @@
 		on the seven segment and matrix displays or not, and how
 		often, in minutes.
 */
-#define	DISPLAY_INFORMATION				true
+#define	DISPLAY_INFORMATION				false
 
 #define	DISPLAY_DATE_FREQ_MIN			15
 #define	DISPLAY_TIME_FREQ_MIN			15
@@ -53,6 +53,9 @@
 #define	HAVE_LSM303DLHC_ACCEL			false
 #define	HAVE_L3GD20_GYRO				false
 #define	HAVE_BMP180_TEMP				false
+
+//	Optional display hardware
+#define	HAVE_7SEG_DISPLAYS				false
 
 /********************************************************/
 /*	Arduino Mega R3 (Arduino) Settings 					*/
@@ -74,9 +77,9 @@
 #define	SERIAL_XBEE_RX_PIN				17
 #define	SERIAL_XBEE_TX_PIN				16
 
-//	Hardware Serial3: RESERVED
-#define	SERIAL_RESERVED_RX_PIN			15
-#define	SERIAL_RESERVED_TX_PIN			14
+//	Hardware Serial3: RoboClaw 2x5 Motor Controller
+#define	SERIAL_ROBOCLAW_RX_PIN			15
+#define	SERIAL_ROBOCLAW_TX_PIN			14
 
 #define	COLOR_SENSOR_LED				4
 #define	SPEAKER_OUT						5

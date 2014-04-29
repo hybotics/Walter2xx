@@ -93,7 +93,9 @@
 	Comments:		Credit is given, where applicable, for code I did not originate.
 */
 #include <Wire.h>
-#include <SoftwareSerial.h>
+
+#include <Adafruit_LEDBackpack.h>
+#include <Adafruit_GFX.h>
 
 #include <Adafruit_Sensor.h>
 #include <Adafruit_L3GD20.h>
@@ -159,9 +161,42 @@ bool hasNotMoved = true;
 //	This will always have the name of the last routine executed before an error
 String lastRoutine;
 
+//	Total number of area readings taken, or -1 if data is not valid
+int nrAreaReadings;
+
+//	PING Ultrasonic range sensor readings
+int ping[MAX_NUMBER_PING];
+
+//	Sharp GP2Y0A21YK0F IR range sensor readings
+float ir[MAX_NUMBER_IR];
+
+//	Area scan readings
+AreaScanReading areaScan[MAX_NUMBER_AREA_READINGS];
+bool areaScanValid = false;
+
 /************************************************************/
 /*	Initialize Objects										*/
 /************************************************************/
+
+/*
+	Initialize our sensors
+
+	We have:
+		These are all on a single small board from Adafruit
+			http://www.adafruit.com/products/1604
+				A BMP180 temperature and pressure sensor
+				An L3GD20 Gyroscope
+				An LSM303 3-Axis Accelerometer / 3-Axis Magnetometer (compass)
+
+		These are also from Adafruit:
+			http://www.adafruit.com/products/1334 (TCS34725 RGB Color sensor)
+			http://www.adafruit.com/products/1296 (TMP006 Heat sensor)
+			http://www.adafruit.com/products/264 (DS1307 Realtime Clock)
+
+		From other sources:
+			GP2Y0A21YK0F IR Ranging sensors (3)
+			PING Ultrasonic Ranging sensors (1)
+*/
 
 Adafruit_L3GD20 gyroscope;
 Hybotics_BMP180_Unified temperature = Hybotics_BMP180_Unified(10001);
@@ -173,6 +208,11 @@ Adafruit_TCS34725 rgb = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS3472
 Adafruit_TMP006 heat = Adafruit_TMP006();
 
 RTC_DS1307 clock;
+
+//	Support for multiple 7 segment displays
+Adafruit_7segment sevenSeg[MAX_NUMBER_7SEG_DISPLAYS];
+
+Adafruit_8x8matrix matrix8x8 = Adafruit_8x8matrix();
 
 /*
 	Setup all our serial devices
@@ -190,54 +230,213 @@ BMSerial xbee(SERIAL_XBEE_RX_PIN, SERIAL_XBEE_TX_PIN);
 //	Hardware Serial3: RoboClaw 3x5 Motor Controller
 RoboClaw roboClaw(SERIAL_ROBOCLAW_RX_PIN, SERIAL_ROBOCLAW_TX_PIN, 10000, false);
 
-//	Hardware Serial1: SSC-32 Servo Controller
-BMSerial ssc32(SERIAL_SSC32_RX_PIN, SERIAL_SSC32_TX_PIN);
-
-//	Hardware Serial2: XBee Mesh Wireless
-BMSerial xbee(SERIAL_XBEE_RX_PIN, SERIAL_XBEE_TX_PIN);
-
 /************************************************************/
 /*	Initialize Servos and Servo Motors						*/
 /************************************************************/
 
+//	Servos
 Servo gripLift, gripWrist, gripGrab, pan, tilt;
 
-ServoMotor leftMotorM1 = {
-	SERVO_MOTOR_LEFT_PIN,
-	SERVO_MOTOR_LEFT_NAME,
-	SERVO_MOTOR_LEFT_OFFSET,
-	SERVO_MOTOR_LEFT_DIRECTION,
-	SERVO_MOTOR_LEFT_NEUTRAL,
-	SERVO_MOTOR_LEFT_MIN,
-	SERVO_MOTOR_LEFT_MAX,
-	0,
-	0
-};
+/*
+	Define motors on the RoboClaw 2x5 motor controllers
+*/
 
-ServoMotor rightMotorM2 = {
-	SERVO_MOTOR_RIGHT_PIN,
-	SERVO_MOTOR_RIGHT_NAME,
-	SERVO_MOTOR_RIGHT_OFFSET,
-	SERVO_MOTOR_RIGHT_DIRECTION,
-	SERVO_MOTOR_RIGHT_NEUTRAL,
-	SERVO_MOTOR_RIGHT_MIN,
-	SERVO_MOTOR_RIGHT_MAX,
-	0,
-	0
-};
+//	Left motor (M1) - RoboClaw 2x5 Controller #1 (0x80)
+Motor leftMotorM1;
 
-//	Total number of area readings taken, or -1 if data is not valid
-int nrAreaReadings;
+//	Right motor (M1) - RoboClaw 2x5 Controller #1 (0x80)
+Motor rightMotorM2;
 
-//	PING Ultrasonic range sensor readings
-int ping[MAX_NUMBER_PING];
+//	Front motor (M1) - RoboClaw 2x5 Controller #2 (0x81)
+Motor frontMotorM1;
 
-//	Sharp GP2Y0A21YK0F IR range sensor readings
-float ir[MAX_NUMBER_IR];
+//	Back motor (M2) - RoboClaw 2x5 Controller #2 (0x81)
+Motor backMotorM2;
 
-//	Area scan readings
-AreaScanReading areaScan[MAX_NUMBER_AREA_READINGS];
-bool areaScanValid = false;
+/********************************************************************/
+/*	Bitmaps for the drawBitMap() routines 							*/
+/********************************************************************/
+
+static const uint8_t PROGMEM
+	hpa_bmp[] = {
+		B10001110,
+		B10001001,
+		B11101110,
+		B10101000,
+		B00000100,
+		B00001010,
+		B00011111,
+		B00010001
+	},
+
+	c_bmp[] = {
+		B01110000,
+		B10001000,
+		B10000000,
+		B10001000,
+		B01110000,
+		B00000000,
+		B00000000,
+		B00000000
+	},
+
+	f_bmp[] = {
+		B11111000,
+		B10000000,
+		B11100000,
+		B10000000,
+		B10000000,
+		B00000000,
+		B00000000,
+		B00000000
+	},
+
+	m_bmp[] = {
+		B00000000,
+		B00000000,
+		B00000000,
+		B00000000,
+		B11101110,
+		B10111010,
+		B10010010,
+		B10000010
+	},
+
+	date_bmp[] = {
+		B10110110,
+		B01001001,
+		B01001001,
+		B00000100,
+		B00000100,
+		B01111100,
+		B10000100,
+		B01111100
+	},
+
+	year_bmp[] = {
+		B00000000,
+		B10001000,
+		B10001000,
+		B01110000,
+		B00101011,
+		B00101100,
+		B00101000,
+		B00000000
+	},
+
+	am_bmp[] = {
+		B01110000,
+		B10001010,
+		B10001010,
+		B01110100,
+		B00110110,
+		B01001001,
+		B01001001,
+		B01001001
+	},
+
+	pm_bmp[] = {
+		B01111100,
+		B10000010,
+		B11111100,
+		B10000000,
+		B10110110,
+		B01001001,
+		B01001001,
+		B01001001
+	},
+
+	allon_bmp[] = {
+		B11111111,
+		B11111111,
+		B11111111,
+		B11111111,
+		B11111111,
+		B11111111,
+		B11111111,
+		B11111111
+	};
+
+/****************************************************************/
+/*	Routines to handle the Seven-Segment and Matrix Displays 	*/
+/****************************************************************/
+
+/*
+    Write a floating point value to the 7-Segment display, such as the 0.56"
+      4 digit displays with I2C backpacks, sold by Adafruit.
+
+    Multiple 7 segment displays are supported automatically. You just have to
+      set the number of displays in the IMU_Multi_Display.h and set the proper
+      I2C addresses for the displays. The base address is 0x70, as shipped by
+      Adafruit. Up to 8 of these displays are supported, with the 
+      being
+      highest addressed display farthest to the left, and decreasing addresses
+      moving to the right. The lowest addressed (0x70) display has to be at the
+      far right for this to work.
+*/
+
+/*
+	Write a number (integer or floating point) to a 7-Segment display
+*/
+void writeNumber (uint8_t displayNr, uint16_t value, uint8_t decimal = 2, bool noblank = false) {
+	uint8_t digitCount = 1, temp = 0;
+	bool decimalPoint = false;
+
+	temp = value / 100;
+/*  
+	console.print(F*"(writeNumber) value = "));
+	console.print(value);
+	console.print(F(", temp = "));
+	console.println(temp);
+*/
+
+  //	Set first digit of the integer portion
+	if ((noblank) or (temp > 9)) {
+/*    
+    console.print(F("(writeNumber) digit = "));
+    console.println(digit);
+*/
+
+		decimalPoint = ((digitCount) == decimal);
+		sevenSeg[displayNr].writeDigitNum(0, int(temp / 10), decimalPoint);  //  Tens
+  } else {
+	    sevenSeg[displayNr].clear();
+  }
+
+	//	Set the second digit of the integer portion
+	digitCount += 1;
+	decimalPoint = ((digitCount) == decimal);
+	sevenSeg[displayNr].writeDigitNum(1, temp % 10, decimalPoint);         //  Ones
+
+	//	Set the first digit of the decimal portion
+	temp = value % 100;
+	digitCount += 1;
+	decimalPoint = ((digitCount) == decimal);
+	sevenSeg[displayNr].writeDigitNum(3, int(temp / 10), decimalPoint);    //  Tens
+
+	//	Set the second digit of the decimal portion
+	digitCount += 1;
+	decimalPoint = ((digitCount) == decimal);
+	sevenSeg[displayNr].writeDigitNum(4, temp % 10, decimalPoint);         //  Ones
+}
+
+/*
+	Clear all the seven segment and matrix displays
+*/
+void clearDisplays (void) {
+	uint8_t nrDisp = 0;
+
+	while (nrDisp < MAX_NUMBER_7SEG_DISPLAYS) {
+		sevenSeg[nrDisp].clear();
+		sevenSeg[nrDisp].drawColon(false);
+		sevenSeg[nrDisp].writeDisplay();
+
+		nrDisp += 1;
+	}
+
+	matrix8x8.clear();
+	matrix8x8.writeDisplay();
+}
 
 /************************************************************/
 /*	Utility routines										*/
