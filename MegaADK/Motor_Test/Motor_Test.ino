@@ -1,5 +1,5 @@
 /*
-	W.A.L.T.E.R. 2.0: Motor Test sketch.
+	W.A.L.T.E.R. 2.0: Motor and Controller Test sketch.
 	Copyright (C) 2014 Dale A. Weber <hybotics.pdx@gmail.com>
 
 	This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 */
 
 /*
-	Program:		W.A.L.T.E.R. 2.0, Motor Test sketch
+	Program:		W.A.L.T.E.R. 2.0, Motor and Controller Test sketch
 	Date:			24-Jun-2014
 	Version:		0.1.0 Arduino Mega ADK - ALPHA
 
@@ -66,18 +66,6 @@ RTC_DS1307 clock;
 /*	Initialize global variables										*/
 /********************************************************************/
 
-//	Total number of area readings taken, or -1 if data is not valid
-int nrAreaScanReadings;
-
-//  These are where the range sensor readings are stored.
-int ping[MAX_NUMBER_PING];
-float ir[MAX_NUMBER_IR];
-
-bool areaScanValid = false, hasMoved = false;
-
-//	Readings for full area scans
-AreaScanReading areaScan[MAX_NUMBER_AREA_READINGS];
-
 /*
 	Time control variables
 */
@@ -93,7 +81,7 @@ bool firstLoop = true;
 */
 
 //	Hardware Serial: Console and debug (replaces Serial.* routines)
-BMSerial console(SERIAL_CONSOLE_RX_PIN, SERIAL_CONSOLE_TX_PIN);
+BMSerial console(SERIAL_CONSOLE_RX_PIN, SERIAL_CONSOLE_TX_PIN, 10000);
 
 //	Hardware Serial1: RoboClaw 3x5 Motor Controller
 RoboClaw roboClaw(SERIAL_ROBOCLAW_RX_PIN, SERIAL_ROBOCLAW_TX_PIN, 10000, false);
@@ -121,12 +109,6 @@ Motor frontMotorM1;
 
 //	Back motor (M2) - RoboClaw 2x5 Controller #2 (0x81)
 Motor backMotorM2;
-
-/********************************************************************/
-/*	Initialize servos												*/
-/********************************************************************/
-
-Servo gripLift, gripWrist, gripGrab, pan, tilt;
 
 /*
 	Code starts here
@@ -218,139 +200,9 @@ String trimTrailingZeros (String st) {
 	return newStr;
 }
 
-void displayDistanceReading (DistanceReading *reading) {
-	if (reading->dist == Closest) {
-		console.print(F("Closest"));
-	} else {
-		console.print(F("Farthest"));
-	}
-
-	console.println(F(" object:"));
-
-	console.print(F("     IR: Reading = "));
-	console.print(reading->irDistance);
-	console.print(F(" cm, Position = "));
-	console.print(reading->irPositionDeg);
-	console.println(F(" degrees"));
-
-	console.print(F("     PING: Reading = "));
-	console.print(reading->pingDistance);
-	console.print(F(" cm, Position = "));
-	console.print(reading->pingPositionDeg);
-	console.println(F(" degrees"));
-
-	console.println();
-}
-
-/*
-    Display the GP2Y0A21YK0F IR sensor readings (cm)
-*/
-void displayIR (void) {
-	int sensorNr = 0;
-  
-	console.println(F("IR Sensor readings:"));
-
-	while (sensorNr < MAX_NUMBER_IR) {
-		console.print(F("IR #"));
-		console.print(sensorNr + 1);
-		console.print(F(" range = "));
-		console.print(ir[sensorNr]);
-		console.println(F(" cm"));
-
-		sensorNr += 1;
-	}
-
-	console.println();
-}
-
-/*
-	Display the readings from the PING Ultrasonic sensors
-*/
-void displayPING (void) {
-	int sensorNr = 0;
-  
-	console.println(F("PING Ultrasonic Sensor readings:"));
-  
-	//	Display PING sensor readings (cm)
-	while (sensorNr < MAX_NUMBER_PING) {
-		console.print(F("Ping #"));
-		console.print(sensorNr + 1);
-		console.print(F(" range = "));
-		console.print(ping[sensorNr]);
-		console.println(F(" cm"));
-
-		sensorNr += 1;
-	}
- 
-	console.println();
-}
-
-/*
-	Display the readings from the IMU (Accelerometer, Magnetometer [Compass], Gyroscope,
-		and Orientation (if valid)
-*/
-void displayIMUReadings (sensors_event_t *accelEvent, sensors_event_t *compassEvent, sensors_vec_t *orientation, bool pitchRollValid, bool headingValid, bool temperatureValid, float celsius, float fahrenheit, int gyroX, int gyroY, int gyroZ) {
-	//	LMS303DLHC Accelerometer readings
-	console.println(F("Accelerometer Readings: X = "));
-	console.print(accelEvent->acceleration.x);
-	console.print(F(", Y = "));
-	console.print(accelEvent->acceleration.y);
-	console.print(F(", Z = "));
-	console.println(accelEvent->acceleration.z);
-	console.println();
-
-	//	LMS303DLHC Magnetometer (Compass) readings
-	console.println(F("Magnetometer (Compass) Readings: X = "));
-	console.print(compassEvent->magnetic.x);
-	console.print(F(", Y = "));
-	console.print(compassEvent->magnetic.y);
-	console.print(F(", Z = "));
-	console.println(compassEvent->magnetic.z);
-	console.println();
-
-	//	L3DG20 Gyroscope readings
-	console.println(F("Gyroscope Readings: Gyro: X = "));
-	console.print(gyroX);
-	console.print(F(", Y = "));
-	console.print(gyroY);
-	console.print(F(", Z = "));
-	console.println(gyroZ);
-	console.println();
-
-	//	BMP180 Temperature readings
-	if (temperatureValid) {
-		console.print(F("Room Temperature = "));
-		console.print(fahrenheit);
-		console.print(F(" F, "));
-		console.print(celsius);
-		console.println(F(" C."));
-		console.println();
-	}
-
-	if (pitchRollValid || headingValid) {
-		console.println(F("Orientation Readings:"));
-	}
-	
-	//	Orientation readings - Pitch, Roll, and Heading
-	if (pitchRollValid) {
-		console.print(F("Roll: "));
-		console.print(orientation->roll);
-		console.print(F("; "));
-		console.print(F("Pitch: "));
-		console.print(orientation->pitch);
-	}
-
-	if (headingValid) {
-		if (pitchRollValid) {
-			console.print(F(", "));
-		}
-
-		console.print(F("Heading: "));
-		console.println(orientation->heading);
-	}
-
-	console.println();
-}
+/********************************************************************/
+/*	Display routines 												*/
+/********************************************************************/
 
 /*
 	Display the data for a given motor
@@ -698,7 +550,7 @@ void setup (void) {
 	console.begin(9600);
 
 	console.println();
-	console.print(F("W.A.L.T.E.R. 2.0 Motor Test, version "));
+	console.print(F("W.A.L.T.E.R. 2.0 Motor and Controller Test, version "));
 	console.print(BUILD_VERSION);
 	console.print(F(" on "));
 	console.print(BUILD_DATE);
@@ -749,19 +601,6 @@ void loop (void) {
 
 	uint8_t analogPin = 0;
 	uint8_t digitalPin = 0;
-
-	//	IMU variables
-	float celsius, fahrenheit, altitude;
-	float accelX, accelY, accelZ;
-	float compassX, compassY, compassZ;
-	float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
-
-	int gyroX = 0, gyroY = 0, gyroZ = 0;
-
-	sensors_event_t accelEvent, compassEvent, tempEvent;
-	sensors_vec_t orientation;
-
-	DistanceReading closestObject, farthestObject;
 
 	/*
 		Code starts here
