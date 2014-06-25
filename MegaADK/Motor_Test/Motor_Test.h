@@ -103,9 +103,9 @@
 #define	ROBOCLAW_CONTROLLERS			1
 #define	ROBOCLAW_SERIAL_BASE_ADDR		0x80
 
-#define	ROBOCLAW_KP						1.0
-#define	ROBOCLAW_KI						0.5
-#define	ROBOCLAW_KD						0.25
+#define	ROBOCLAW_KP						0x00010000
+#define	ROBOCLAW_KI						0x00008000
+#define	ROBOCLAW_KD						0x00004000
 #define	ROBOCLAW_QPPS					44000
 
 #define ROBOCLAW_MOTOR_LEFT_NAME		"Left"
