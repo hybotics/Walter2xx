@@ -26,10 +26,10 @@
 					Added constants for RoboClaw motor controllers
 
 	Dependencies:	Adafruit libraries:
-						LSM303DLHC, L3GD20, TMP006, TCS34727, RTClib for the DS1307
+						RTClib for the DS1307
 
-					Hybotics libraries:
-						BMP180 (modified from Adafruit's BMP085 library)
+					Other libraries:
+						None
 
 	Comments:		Credit is given, where applicable, for code I did not originate.
 						This sketch started out as an Adafruit tutorial for the electret

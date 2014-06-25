@@ -24,15 +24,10 @@
 	Purpose:		Test Motors and Motor Controllers
 						
 	Dependencies:	Adafruit libraries:
-						Adafruit_Sensor and Adafruit_L3GD20 libraries.
-
-					Hybotics libraries:
-						Hybotics_10DOF_Unified (forked from the Adafruit_10DOF library)
-						Hybotics_LSM303DLHC_Unified (forked from the Adafruit_LSM303 library)
+						RTClib for the DS1307
 
 					Other libraries:
-						RTClib for the DS1307 (Adafruit version),
-						KalmanFilter
+						None
 
 	Comments:		Credit is given, where applicable, for code I did not originate.
 						This sketch started out as an Adafruit tutorial for the electret
@@ -572,8 +567,19 @@ void setup (void) {
 		//	Initialize the RoboClaw 2x5 motor controller port
 		initRoboClaw(roboClawAddress1, 38400, &leftMotorM1, &rightMotorM2);
 
-		//	Let's see if we can move
+		//	Let's see if we can move the motors forward
+		console.println(F("Moving the motors forward for 10 seconds in setup.."));
 		setMotors(roboClawAddress1, 100, 100, &leftMotorM1, &rightMotorM2);
+		delay(10000);
+
+		//	Let's see if we can move the motors in reverse
+		console.println(F("Moving the motors in reverse for 10 seconds in setup.."));
+		setMotors(roboClawAddress1, -100, -100, &leftMotorM1, &rightMotorM2);
+		delay(10000);
+
+		//	Stop the motors
+		console.println(F("Stopping the motors in setup.."));
+		setMotors(roboClawAddress1, 0, 0, &leftMotorM1, &rightMotorM2);
 	}
 }
 
@@ -634,9 +640,7 @@ void loop (void) {
 		} else {
 			displayRoboClawData(roboClawAddress1, &leftMotorM1, &rightMotorM2);
 		}
-	}
 
-	if (ROBOCLAW_CONTROLLERS > 0) {
 		/*
 			Read the RoboClaw 2x5 motor data
 		*/
