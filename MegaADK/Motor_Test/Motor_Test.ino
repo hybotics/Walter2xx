@@ -45,7 +45,7 @@
 
 
 /*
-	Additional libraries
+	Additional libraries and local includes
 */
 
 #include "Motor_Test.h"
@@ -94,10 +94,10 @@ uint8_t roboClawAddress1 = ROBOCLAW_SERIAL_BASE_ADDR;
 uint8_t roboClawAddress2 = ROBOCLAW_SERIAL_BASE_ADDR + 1;
 
 //	Left side motor (M1) - RoboClaw 2x5 Controller #1 (0x80)
-Motor leftMotorM1;
+Motor leftMotorM2;
 
 //	Right side motor (M2) - RoboClaw 2x5 Controller #1 (0x80)
-Motor rightMotorM2;
+Motor rightMotorM1;
 
 //	Front motor (M1) - RoboClaw 2x5 Controller #2 (0x81)
 Motor frontMotorM1;
@@ -114,51 +114,32 @@ Motor backMotorM2;
 /********************************************************************/
 
 /*
-    Left zero pad a numeric string
+    Process error conditions
 */
-String leftZeroPadString (String st, uint8_t nrPlaces) {
-	uint8_t i, len;
-	String newStr = st;
-  
-	if (newStr.length() < nrPlaces) {
-		len = st.length();
-  
-		for (i = len; i < nrPlaces; i++) {
-			newStr = String("0" + newStr);
-		}
+void processError (uint16_t err, String routine, String message) {
+	console.print(F("ERROR: "));
+	console.print(message);
+	console.print(F(", Code = "));
+	console.print(err);
+	console.print(F(", in routine '"));
+	console.print(routine);
+	console.println(F("' !"));
+}
+
+/*
+	Wait for a number of seconds to allow time to read the Console Serial Monitor log
+*/
+void wait (uint8_t nrSeconds) {
+	uint8_t count;
+
+	console.print(F("Waiting"));
+
+	for (count = 0; count < nrSeconds; count++) {
+		console.print(F("."));
+		delay(1000);
 	}
 
-	return newStr;
-}
-
-/*
-    Convert a pulse width in ms to inches
-*/
-long microsecondsToInches (long microseconds) {
-	/*
-		According to Parallax's datasheet for the PING))), there are
-			73.746 microseconds per inch (i.e. sound travels at 1130 feet per
-			second).  This gives the distance travelled by the ping, outbound
-			and return, so we divide by 2 to get the distance of the obstacle.
-
-		See: http://www.parallax.com/dl/docs/prod/acc/28015-PING-v1.3.pdf
-	*/
-	
-	return microseconds / 74 / 2;
-}
-
-/*
-    Convert a pulse width in ms to a distance in cm
-*/
-long microsecondsToCentimeters (long microseconds) {
-	/*
-		The speed of sound is 340 m/s or 29 microseconds per centimeter.
-
-		The ping travels out and back, so to find the distance of the
-			object we take half of the distance travelled.
-	*/
-
-	return microseconds / 29 / 2;
+	console.println();
 }
 
 /*
@@ -169,30 +150,6 @@ void pulseDigital(int pin, int duration) {
 	delay(duration);					// Wait for duration ms
 	digitalWrite(pin, LOW);				// Turn the pin OFF by making the voltage LOW (0V)
 	delay(duration);					// Wait for duration ms
-}
-
-/*
-	Convert a temperature in Celsius to Fahrenheit
-*/
-float toFahrenheit (float celsius) {
-	return (celsius * 1.8) + 32;
-}
-
-/*
-    Trim trailing zeros from a numeric string
-*/
-String trimTrailingZeros (String st) {
-	uint8_t newStrLen = 0;
-	String newStr = st;
-
-	newStrLen = newStr.length();
-
-	while (newStr.substring(newStrLen - 1) == "0") {
-		newStrLen -= 1;
-		newStr = newStr.substring(0, newStrLen);
-	}
-
-	return newStr;
 }
 
 /********************************************************************/
@@ -250,41 +207,41 @@ void displayMotor (Motor *motor, String name) {
 /*
 	Display data from the RoboClaw 2x5 motor controller
 */
-void displayRoboClawData (uint8_t address, Motor *leftMotorM1, Motor *rightMotorM2) {
+void displayRoboClawData (uint8_t address, Motor *leftMotorM2, Motor *rightMotorM1) {
 	char version[32];
 
 	roboClaw.ReadVersion(address, version);
 
 	console.print(F("RoboClaw 2x5 status (version "));
 	console.print(version);
-	console.print(F("): "));
+	console.println(F(")"));
 	console.println();
 
-    if (leftMotorM1->encoderValid) {
+    if (leftMotorM2->encoderValid) {
 		console.print(F("Left Motor Encoder = "));
-		console.print(leftMotorM1->encoder, DEC);
+		console.print(leftMotorM2->encoder, DEC);
 		console.print(F(", Status =  "));
-		console.print(leftMotorM1->encoderStatus, HEX);
+		console.print(leftMotorM2->encoderStatus, HEX);
 		console.println();
 	}
 
-	if (leftMotorM1->speedValid) {
+	if (leftMotorM2->speedValid) {
 		console.print(F("Left Motor Speed = "));
-		console.print(leftMotorM1->speed, DEC);
+		console.print(leftMotorM2->speed, DEC);
 		console.println();
 	}
 
-	if (rightMotorM2->encoderValid) {
+	if (rightMotorM1->encoderValid) {
 		console.print(F("Right Motor Encoder = "));
-		console.print(rightMotorM2->encoder, DEC);
+		console.print(rightMotorM1->encoder, DEC);
 		console.print(F(", Status = "));
-		console.print(rightMotorM2->encoderStatus, HEX);
+		console.print(rightMotorM1->encoderStatus, HEX);
 		console.println();
 	}
 
-	if (rightMotorM2->speedValid) {
+	if (rightMotorM1->speedValid) {
 		console.print(F("Right Motor Speed = "));
-		console.print(rightMotorM2->speed, DEC);
+		console.print(rightMotorM1->speed, DEC);
 		console.println();
 	}
 	
@@ -294,7 +251,7 @@ void displayRoboClawData (uint8_t address, Motor *leftMotorM1, Motor *rightMotor
 /*
 	Display the data in a Servo struct
 */
-void displayServo (Servo *servo, String servoName) {
+void displayServo (Servo *servo) {
 	console.println();
 	console.print(servo->name);
 	console.println(F(" Servo:"));
@@ -367,35 +324,6 @@ uint16_t readRoboClawData (uint8_t address, Motor *leftM1, Motor *rightM2) {
 /*	Miscellaneous routines 											*/
 /********************************************************************/
 
-/*
-    Process error conditions
-*/
-void processError (uint16_t err, String routine, String message) {
-	console.print(F("ERROR: "));
-	console.print(message);
-	console.print(F(", Code = "));
-	console.print(err);
-	console.print(F(", in routine '"));
-	console.print(routine);
-	console.println(F("' !"));
-}
-
-/*
-	Wait for a bit to allow time to read the Console Serial Monitor log
-*/
-void wait (uint8_t nrSeconds) {
-	uint8_t count;
-
-	console.print(F("Waiting"));
-
-	for (count = 0; count < nrSeconds; count++) {
-		console.print(F("."));
-		delay(1000);
-	}
-
-	console.println();
-}
-
 /********************************************************************/
 /*	RoboClaw 2x5 Motor Controller routines 							*/
 /********************************************************************/
@@ -405,15 +333,15 @@ void wait (uint8_t nrSeconds) {
 
 	The left and right motor speeds may be different.
 */
-void setMotors (uint8_t address, short leftSpd, short rightSpd, Motor *leftM1, Motor *rightM2) {
+void setMotors (uint8_t address, short rightSpd, Motor *rightM1, short leftSpd, Motor *leftM2) {
 	bool leftDir, rightDir;
 
 	console.println(F("Setting motor speeds.."));
 
-	leftDir = setMotorSpeed(address, leftSpd, leftM1);
-	rightDir = setMotorSpeed(address, rightSpd, rightM2);
+	leftDir = setMotorSpeed(address, leftSpd, leftM2);
+	rightDir = setMotorSpeed(address, rightSpd, rightM1);
 
-	updateMotors(address, leftDir, rightDir, leftM1, rightM2);
+	updateMotors(address, rightDir, rightM1, leftDir, leftM2);
 }
 
 bool setMotorSpeed (uint8_t address, short spd, Motor *motor) {
@@ -445,28 +373,28 @@ bool setMotorSpeed (uint8_t address, short spd, Motor *motor) {
 /*
 	Update motor data
 */
-void updateMotors (uint8_t address, bool leftDir, bool rightDir, Motor *leftM1, Motor *rightM2) {
+void updateMotors (uint8_t address, bool rightDir, Motor *rightM1, bool leftDir, Motor *leftM2) {
 	bool direction, valid;
 	uint8_t speedStatus;
 	uint32_t speed;
 
 	console.println(F("Updating motors.."));
 
-	//	Update left motor data
+	//	Update right motor data
 	speed = roboClaw.ReadSpeedM1(address, &speedStatus, &valid);
 
-	leftM1->speed = speed;
-	leftM1->speedStatus = speedStatus;
-	leftM1->speedValid = valid;
-	leftM1->forward = direction;
+	rightM1->speed = speed;
+	rightM1->speedStatus = speedStatus;
+	rightM1->speedValid = valid;
+	rightM1->forward = direction;
 
-	//	Update right motor data
+	//	Update left motor data
 	speed = roboClaw.ReadSpeedM2(address, &speedStatus, &valid);
 
-	rightM2->speed = speed;
-	rightM2->speedStatus = speedStatus;
-	rightM2->speedValid = valid;
-	rightM2->forward = direction;
+	leftM2->speed = speed;
+	leftM2->speedStatus = speedStatus;
+	leftM2->speedValid = valid;
+	leftM2->forward = direction;
 }
 
 /********************************************************************/
@@ -476,7 +404,7 @@ void updateMotors (uint8_t address, bool leftDir, bool rightDir, Motor *leftM1, 
 /*
 	Initialize the RoboClaw 2x5 motor controller
 */
-void initRoboClaw (uint8_t address, uint16_t bps, Motor *leftM1, Motor *rightM2) {
+void initRoboClaw (uint8_t address, uint16_t bps, Motor *rightM1, Motor *leftM2) {
 	console.print(F("Initializing the RoboClaw 2x5 Motor Controller at address "));
 	console.print(address, HEX);
 	console.print(F(", for "));
@@ -490,30 +418,30 @@ void initRoboClaw (uint8_t address, uint16_t bps, Motor *leftM1, Motor *rightM2)
 	roboClaw.SetM2VelocityPID(address, ROBOCLAW_KD, ROBOCLAW_KP, ROBOCLAW_KI, ROBOCLAW_QPPS);
 
 	//	For Packet Serial modes
-	leftM1->name = ROBOCLAW_MOTOR_LEFT_NAME;
-	leftM1->location = Left;
-	leftM1->encoder = 0;
-	leftM1->encoderStatus = 0;
-	leftM1->encoderValid = false;
-	leftM1->speed = 0;
-	leftM1->speedStatus = 0;
-	leftM1->speedValid = false;
-	leftM1->forward = true;
-	leftM1->distance = 0;
-	leftM1->distanceValid = false;		    
+	rightM1->name = ROBOCLAW_MOTOR_RIGHT_NAME;
+	rightM1->location = Right;
+	rightM1->encoder = 0;
+	rightM1->encoderStatus = 0;
+	rightM1->encoderValid = false;
+	rightM1->speed = 0;
+	rightM1->speedStatus = 0;
+	rightM1->speedValid = false;
+	rightM1->forward = true;
+	rightM1->distance = 0;
+	rightM1->distanceValid = false;		    
 
 	//	For Packet Serial modes
-	rightM2->name = ROBOCLAW_MOTOR_RIGHT_NAME;
-	rightM2->location = Right;
-	rightM2->encoder = 0;
-	rightM2->encoderStatus = 0;
-	rightM2->encoderValid = false;
-	rightM2->speed = 0;
-	rightM2->speedStatus = 0;
-	rightM2->speedValid = false;
-	rightM2->forward = true;
-	rightM2->distance = 0;
-	rightM2->distanceValid = false;		    
+	leftM2->name = ROBOCLAW_MOTOR_LEFT_NAME;
+	leftM2->location = Left;
+	leftM2->encoder = 0;
+	leftM2->encoderStatus = 0;
+	leftM2->encoderValid = false;
+	leftM2->speed = 0;
+	leftM2->speedStatus = 0;
+	leftM2->speedValid = false;
+	leftM2->forward = true;
+	leftM2->distance = 0;
+	leftM2->distanceValid = false;		    
 }
 
 /*
@@ -565,21 +493,46 @@ void setup (void) {
 
 	if (ROBOCLAW_CONTROLLERS > 0) {
 		//	Initialize the RoboClaw 2x5 motor controller port
-		initRoboClaw(roboClawAddress1, 38400, &leftMotorM1, &rightMotorM2);
+		initRoboClaw(roboClawAddress1, 38400, &rightMotorM1, &leftMotorM2);
 
 		//	Let's see if we can move the motors forward
 		console.println(F("Moving the motors forward for 10 seconds in setup.."));
-		setMotors(roboClawAddress1, 100, 100, &leftMotorM1, &rightMotorM2);
-		delay(10000);
+		setMotors(roboClawAddress1, 100, &rightMotorM1, 100, &leftMotorM2);
+		displayRoboClawData(roboClawAddress1, &rightMotorM1, &leftMotorM2);
 
-		//	Let's see if we can move the motors in reverse
-		console.println(F("Moving the motors in reverse for 10 seconds in setup.."));
-		setMotors(roboClawAddress1, -100, -100, &leftMotorM1, &rightMotorM2);
-		delay(10000);
+		//	Wait 10 seconds
+		wait(10);
+
+		console.println(F("Data after moving forward.."));
+		displayRoboClawData(roboClawAddress1, &rightMotorM1, &leftMotorM2);
+
+		//	Wait 2 seconds
+		wait(2);
 
 		//	Stop the motors
 		console.println(F("Stopping the motors in setup.."));
-		setMotors(roboClawAddress1, 0, 0, &leftMotorM1, &rightMotorM2);
+		setMotors(roboClawAddress1, 0, &rightMotorM1, 0, &leftMotorM2);
+
+		//	Let's see if we can move the motors in reverse
+		console.println(F("Moving the motors in reverse for 10 seconds in setup.."));
+		setMotors(roboClawAddress1, -100, &rightMotorM1, -100, &leftMotorM2);
+		displayRoboClawData(roboClawAddress1, &rightMotorM1, &leftMotorM2);
+
+		//	Wait 10 seconds
+		wait(10);
+
+		console.println(F("Data after moving in reverse.."));
+		displayRoboClawData(roboClawAddress1, &rightMotorM1, &leftMotorM2);
+
+		//	Wait 2 seconds
+		wait(2);
+
+		//	Stop the motors
+		console.println(F("Stopping the motors in setup.."));
+		setMotors(roboClawAddress1, 0, &rightMotorM1, 0, &leftMotorM2);
+
+		//	Wait 5 seconds
+		wait(5);
 	}
 }
 
@@ -633,12 +586,12 @@ void loop (void) {
 		*/
 		console.println(F("Reading RoboClaw.."));
 
-		errorStatus = readRoboClawData(roboClawAddress1, &leftMotorM1, &rightMotorM2);
+		errorStatus = readRoboClawData(roboClawAddress1, &rightMotorM1, &leftMotorM2);
 
 		if (errorStatus != 0) {
 			processError(errorStatus, "readRoboClawData", "Unhandled problem");
 		} else {
-			displayRoboClawData(roboClawAddress1, &leftMotorM1, &rightMotorM2);
+			displayRoboClawData(roboClawAddress1, &rightMotorM1, &leftMotorM2);
 		}
 
 		/*
@@ -646,12 +599,12 @@ void loop (void) {
 		*/
 		console.println(F("Reading RoboClaw.."));
 
-		errorStatus = readRoboClawData(roboClawAddress1, &leftMotorM1, &rightMotorM2);
+		errorStatus = readRoboClawData(roboClawAddress1, &rightMotorM1, &leftMotorM2);
 
 		if (errorStatus != 0) {
 			processError(errorStatus, "readRoboClawData", "Unhandled problem");
 		} else {
-			displayRoboClawData(roboClawAddress1, &leftMotorM1, &rightMotorM2);
+			displayRoboClawData(roboClawAddress1, &rightMotorM1, &leftMotorM2);
 		}
 	}
 
