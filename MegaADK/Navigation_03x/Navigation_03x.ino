@@ -1419,6 +1419,51 @@ int readParallaxPING (byte sensorNr, boolean units=true) {
 	return result;
 }
 
+/********************************************************************/
+/*	Orion Robotics RoboClaw 2x5 Motor Controller routines			*/
+/********************************************************************/
+
+/*
+	Initialize the RoboClaw 2x5 motor controller
+*/
+void initRoboClaw (uint8_t address, uint16_t bps, Motor *leftM1, Motor *rightM2) {
+	console.print(F("Initializing the RoboClaw 2x5 Motor Controller at address "));
+	console.print(address, HEX);
+	console.print(F(", for "));
+	console.print(bps);
+	console.println(F(" Bps communication."));
+
+	roboClaw.begin(bps);
+
+	//	Set the RoboClaw motor constants
+	roboClaw.SetM1VelocityPID(address, ROBOCLAW_KD, ROBOCLAW_KP, ROBOCLAW_KI, ROBOCLAW_QPPS);
+	roboClaw.SetM2VelocityPID(address, ROBOCLAW_KD, ROBOCLAW_KP, ROBOCLAW_KI, ROBOCLAW_QPPS);
+
+	//	For Packet Serial modes
+	leftM1->descr = ROBOCLAW_MOTOR_LEFT_NAME;
+	leftM1->encoder = 0;
+	leftM1->encoderStatus = 0;
+	leftM1->encoderValid = false;
+	leftM1->mspeed = 0;
+	leftM1->speedStatus = 0;
+	leftM1->speedValid = false;
+	leftM1->forward = true;
+	leftM1->distance = 0;
+	leftM1->distanceValid = false;		    
+
+	//	For Packet Serial modes
+	rightM2->descr = ROBOCLAW_MOTOR_RIGHT_NAME;
+	rightM2->encoder = 0;
+	rightM2->encoderStatus = 0;
+	rightM2->encoderValid = false;
+	rightM2->mspeed = 0;
+	rightM2->speedStatus = 0;
+	rightM2->speedValid = false;
+	rightM2->forward = true;
+	rightM2->distance = 0;
+	rightM2->distanceValid = false;		    
+}
+
 /*
 	Read current data from the RoboClaw 2x5 Motor Controller
 */
@@ -1450,6 +1495,40 @@ uint16_t readRoboClawData (uint8_t address, Motor *leftM1, Motor *rightM2) {
 	rightM2->mspeed = roboClaw.ReadSpeedM2(address, &status, &valid);
 	rightM2->speedStatus = status;
 	rightM2->speedValid = valid;
+
+	return errorStatus;
+}
+
+uint16_t setGearMotorSpeed (Motor *motor, short spd, bool unknown, short rampSpd = 0) {
+	uint16_t errorStatus = 0;
+
+	lastRoutine = String(F("setGearMotorSpeed"));
+
+	return errorStatus;
+}
+
+/*
+	Stop both motors NOW
+*/
+uint16_t stopGearMotors (uint16_t rampSpeed = SERVO_MOTOR_SPEED_INCR) {
+	uint16_t errorStatus = 0;
+
+	lastRoutine = String(F("stopGearMotors"));
+	console.println(F("Stopping the motors.."));
+
+	errorStatus = setGearMotorSpeed(&leftM1, 0, false, rampSpeed);
+
+	if (errorStatus != 0) {
+		processError(errorStatus, "Could not set the speed for the " + leftM1.descr + " motor");
+	} else {
+		errorStatus = setGearMotorSpeed(&rightM2, 0, true, rampSpeed);
+
+		if (errorStatus != 0) {
+			processError(errorStatus, "Could not set the speed for the " + rightM2.descr + " motor");
+		} else {
+			hasNotMoved = true;
+		}
+	}
 
 	return errorStatus;
 }
@@ -1645,32 +1724,6 @@ uint16_t setServoMotorSpeed (ServoMotor *servoMotor, int spd, bool term, uint8_t
 	return errorStatus;
 }
 
-/*
-	Stop both motors NOW
-*/
-uint16_t stopMotors (uint16_t rampSpeed = SERVO_MOTOR_SPEED_INCR) {
-	uint16_t errorStatus = 0;
-
-	lastRoutine = String(F("stopMotors"));
-	console.println(F("Stopping the motors.."));
-
-	errorStatus = setMotorSpeed(&leftMotorM1, 0, false, rampSpeed);
-
-	if (errorStatus != 0) {
-		processError(errorStatus, "Could not set the speed for the " + leftMotorM1.descr + " motor");
-	} else {
-		errorStatus = setMotorSpeed(&rightMotorM2, 0, true, rampSpeed);
-
-		if (errorStatus != 0) {
-			processError(errorStatus, "Could not set the speed for the " + rightMotorM2.descr + " motor");
-		} else {
-			hasNotMoved = true;
-		}
-	}
-
-	return errorStatus;
-}
-
 DistanceObject findDistanceObjects () {
 	uint8_t readingNr;
 
@@ -1750,7 +1803,7 @@ uint16_t scanArea (Servo *pan, int startDeg, int stopDeg, int incrDeg) {
 			*/
 
 			//	Stop, so we can do this scan
-			errorStatus = stopMotors();
+			errorStatus = stopGearMotors();
 
 			if (errorStatus != 0) {
 				runAwayRobot(errorStatus);
@@ -1822,16 +1875,16 @@ uint16_t turnToFarthestObject (DistanceObject *distObj, Servo *pan) {
 
 	if (distObj->farthestPosPING < 0) {
 		//	Turn to the right
-		errorStatus = setMotorSpeed(&leftMotorM1, 100, false);
+		errorStatus = setGearMotorSpeed(&leftM1, 100, false);
 
 		if (errorStatus == 0) {
-			errorStatus = setMotorSpeed(&rightMotorM2, -100, true);
+			errorStatus = setGearMotorSpeed(&rightM2, -100, true);
 			delay(1000);
 		}
 
 		if (errorStatus == 0) {
 			//	Start moving forward again
-			errorStatus = setMotorSpeed(&rightMotorM2, 100, true);
+			errorStatus = setGearMotorSpeed(&rightM2, 100, true);
 		}
 
 		if (errorStatus != 0) {
@@ -1839,16 +1892,16 @@ uint16_t turnToFarthestObject (DistanceObject *distObj, Servo *pan) {
 		}
 	} else if (distObj->farthestPosPING > 0) {
 		//	Turn to the left
-		errorStatus = setMotorSpeed(&leftMotorM1, -100, false);
+		errorStatus = setGearMotorSpeed(&leftM1, -100, false);
 
 		if (errorStatus == 0) {
-			errorStatus = setMotorSpeed(&rightMotorM2, 100, true);
+			errorStatus = setGearMotorSpeed(&rightM2, 100, true);
 			delay(1000);
 		}
 
 		if (errorStatus == 0) {
 			//	Start moving forward again
-			errorStatus = setMotorSpeed(&leftMotorM1, 100, true);
+			errorStatus = setGearMotorSpeed(&leftM1, 100, true);
 		}
 
 		if (errorStatus != 0) {
@@ -1856,17 +1909,17 @@ uint16_t turnToFarthestObject (DistanceObject *distObj, Servo *pan) {
 		}
 	} else {
 		//	Backup and scan again
-		errorStatus = setMotorSpeed(&leftMotorM1, -100, false);
+		errorStatus = setGearMotorSpeed(&leftM1, -100, false);
 
 		if (errorStatus == 0) {
-			errorStatus = setMotorSpeed(&rightMotorM2, -100, true);
+			errorStatus = setGearMotorSpeed(&rightM2, -100, true);
 			delay(1000);
 		} else {
 			processError(errorStatus, F("There was a problem backing up"));
 		}
 
 		if (errorStatus == 0) {
-			errorStatus = stopMotors();
+			errorStatus = stopGearMotors();
 
 			if (errorStatus != 0) {
 				runAwayRobot(errorStatus);
@@ -1995,14 +2048,14 @@ uint16_t initMotors (ServoMotor *leftM1, ServoMotor *rightM2) {
 
 	console.println(F("Initializing Motors.."));
 
-	errorStatus = setMotorSpeed(leftM1, SERVO_MOTOR_LEFT_NEUTRAL, false);
+	errorStatus = setGearMotorSpeed(leftM1, SERVO_MOTOR_LEFT_NEUTRAL, false);
 
 	if (errorStatus != 0) {
 		processError(errorStatus, "Could not set the speed for the " + leftM1->descr + " motor");
 	} else {
 		leftM1->forward = SERVO_MOTOR_LEFT_DIRECTION;
 
-		errorStatus = setMotorSpeed(rightM2, SERVO_MOTOR_RIGHT_NEUTRAL, true);
+		errorStatus = setGearmOtorspeed(rightM2, SERVO_MOTOR_RIGHT_NEUTRAL, true);
 
 		if (errorStatus != 0) {
 			processError(errorStatus, "Could not set the speed for the " + rightM2->descr + " motor");
@@ -2042,47 +2095,6 @@ uint16_t initPanTilt (Servo *mainPan, Servo *mainTilt, Servo *cameraPan, Servo *
 	}
 
 	return errorStatus;
-}
-
-/*
-	Initialize the RoboClaw 2x5 motor controller
-*/
-void initRoboClaw (uint8_t address, uint16_t bps, Motor *leftM1, Motor *rightM2) {
-	console.print(F("Initializing the RoboClaw 2x5 Motor Controller at address "));
-	console.print(address, HEX);
-	console.print(F(", for "));
-	console.print(bps);
-	console.println(F(" Bps communication."));
-
-	roboClaw.begin(bps);
-
-	//	Set the RoboClaw motor constants
-	roboClaw.SetM1VelocityPID(address, ROBOCLAW_KD, ROBOCLAW_KP, ROBOCLAW_KI, ROBOCLAW_QPPS);
-	roboClaw.SetM2VelocityPID(address, ROBOCLAW_KD, ROBOCLAW_KP, ROBOCLAW_KI, ROBOCLAW_QPPS);
-
-	//	For Packet Serial modes
-	leftM1->descr = ROBOCLAW_MOTOR_LEFT_NAME;
-	leftM1->encoder = 0;
-	leftM1->encoderStatus = 0;
-	leftM1->encoderValid = false;
-	leftM1->mspeed = 0;
-	leftM1->speedStatus = 0;
-	leftM1->speedValid = false;
-	leftM1->forward = true;
-	leftM1->distance = 0;
-	leftM1->distanceValid = false;		    
-
-	//	For Packet Serial modes
-	rightM2->descr = ROBOCLAW_MOTOR_RIGHT_NAME;
-	rightM2->encoder = 0;
-	rightM2->encoderStatus = 0;
-	rightM2->encoderValid = false;
-	rightM2->mspeed = 0;
-	rightM2->speedStatus = 0;
-	rightM2->speedValid = false;
-	rightM2->forward = true;
-	rightM2->distance = 0;
-	rightM2->distanceValid = false;		    
 }
 
 /*
@@ -2322,12 +2334,12 @@ void setup (void) {
 
 			//	Start the motors, forward
 			console.println(F("Starting the motors, forward"));
-			errorStatus = setMotorSpeed(&leftMotorM1, 250, false);
+			errorStatus = setGearmOtorspeed(&leftMotorM1, 250, false);
 
 			if (errorStatus != 0) {
 				processError(errorStatus, F("Could not set speed for the LEFT motor"));
 			} else {
-				errorStatus = setMotorSpeed(&rightMotorM2, 250, true);
+				errorStatus = setGearmOtorspeed(&rightMotorM2, 250, true);
 
 				if (errorStatus != 0) {
 					processError(errorStatus, F("Could not set speed for the RIGHT motor"));
@@ -2335,7 +2347,7 @@ void setup (void) {
 					delay(5000);
 
 					//	Stop the motors
-					errorStatus = stopMotors();
+					errorStatus = stopGearMotors();
 
 					if (errorStatus != 0) {
 						runAwayRobot(errorStatus);
@@ -2348,12 +2360,12 @@ void setup (void) {
 			} else {
 				//	Start the motors, reverse
 				console.println(F("Starting the motors, reverse"));
-				errorStatus = setMotorSpeed(&leftMotorM1, -250, false);
+				errorStatus = setGearmOtorspeed(&leftMotorM1, -250, false);
 
 				if (errorStatus != 0) {
 					processError(errorStatus, F("Could not set speed for the LEFT motor"));
 				} else {
-					errorStatus = setMotorSpeed(&rightMotorM2, -250, true);
+					errorStatus = setGearmOtorspeed(&rightMotorM2, -250, true);
 
 					if (errorStatus != 0) {
 						processError(errorStatus, F("Could not set speed for the RIGHT motor"));
@@ -2361,7 +2373,7 @@ void setup (void) {
 						delay(5000);
 
 						//	Stop the motors
-						errorStatus = stopMotors();
+						errorStatus = stopGearMotors();
 
 						if (errorStatus != 0) {
 							runAwayRobot(errorStatus);
@@ -2379,7 +2391,7 @@ void setup (void) {
 		processError(errorStatus, F("Could not calibrate and test the motors"));
 	} else if (DOING_MOTOR_CALIBRATION) {
 		delay(2000);
-		errorStatus = stopMotors();
+		errorStatus = stopGearMotors();
 
 		if (errorStatus != 0) {
 			runAwayRobot(errorStatus);
@@ -2388,12 +2400,12 @@ void setup (void) {
 			loopCount = 0;
 
 			while ((errorStatus == 0) && (loopCount < 10)) {
-				errorStatus = setMotorSpeed(&leftMotorM1, 250, false);
+				errorStatus = setGearmOtorspeed(&leftMotorM1, 250, false);
 
 				if (errorStatus != 0) {
 					processError(errorStatus, "Could not start the " + leftMotorM1.descr + " motor");
 				} else {
-					errorStatus = setMotorSpeed(&rightMotorM2, 250, true);
+					errorStatus = setGearmOtorspeed(&rightMotorM2, 250, true);
 
 					if (errorStatus != 0) {
 						processError(errorStatus, "Could not start the " + rightMotorM2.descr + " motor");
@@ -2403,7 +2415,7 @@ void setup (void) {
 
 					delay(3000);
 
-					errorStatus = stopMotors();
+					errorStatus = stopGearMotors();
 
 					if (errorStatus != 0) {
 						runAwayRobot(errorStatus);
@@ -2488,8 +2500,8 @@ void loop (void) {
 	}
 
 	//	Start our motors at a reasonable speed.
-	setMotorSpeed(&leftMotorM1, 50, false);
-	setMotorSpeed(&rightMotorM2, 50, true);
+	setGearMotorspeed(&leftMotorM1, 50, false);
+	setGearMotorSpeed(&rightMotorM2, 50, true);
 
 	//  Display the date.
 	if (displayDate && DISPLAY_INFORMATION && HAVE_7SEGMENT_DISPLAYS) {
@@ -2611,7 +2623,7 @@ void loop (void) {
 
 	//	Let's see if we're too close to an object.. If so, stop and scan the area
 	if ((ping[PING_FRONT_CENTER] < PING_MIN_DISTANCE_CM) || (ir[IR_FRONT_CENTER] < IR_MIN_DISTANCE_CM)) {
-		errorStatus = stopMotors();
+		errorStatus = stopGearMotors();
 
 		if (errorStatus != 0) {
 			runAwayRobot(errorStatus);
@@ -2631,7 +2643,7 @@ void loop (void) {
 			if (errorStatus != 0) {
 				processError(errorStatus, F("Could not complete a turn to the farthest object"));
 
-				errorStatus = stopMotors();
+				errorStatus = stopGearMotors();
 
 				if (errorStatus != 0) {
 					runAwayRobot(errorStatus);

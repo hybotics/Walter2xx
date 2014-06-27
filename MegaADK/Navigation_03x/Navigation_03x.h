@@ -310,6 +310,13 @@
 	Structs for data we store on various onboard devices
 *********************************************************/
 
+typedef enum MotorLocation {
+	Left,
+	Right,
+	Front,
+	Back
+};
+
 struct bmp180Data {
 	sensors_event_t tempEvent;
 	float seaLevelPressure;
@@ -446,13 +453,6 @@ struct Servo {
 	uint8_t maxDegrees;
 
 	uint16_t error;
-};
-
-typedef enum MotorLocation {
-	Left,
-	Right,
-	Front,
-	Back
 };
 
 #endif

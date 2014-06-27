@@ -328,23 +328,7 @@ uint16_t readRoboClawData (uint8_t address, Motor *leftM1, Motor *rightM2) {
 /*	RoboClaw 2x5 Motor Controller routines 							*/
 /********************************************************************/
 
-/*
-	Set motor speeds
-
-	The left and right motor speeds may be different.
-*/
-void setMotors (uint8_t address, short rightSpd, Motor *rightM1, short leftSpd, Motor *leftM2) {
-	bool leftDir, rightDir;
-
-	console.println(F("Setting motor speeds.."));
-
-	leftDir = setMotorSpeed(address, leftSpd, leftM2);
-	rightDir = setMotorSpeed(address, rightSpd, rightM1);
-
-	updateMotors(address, rightDir, rightM1, leftDir, leftM2);
-}
-
-bool setMotorSpeed (uint8_t address, short spd, Motor *motor) {
+bool setGearMotorSpeed (uint8_t address, short spd, Motor *motor) {
 	bool direction;
 
 	if (motor->location == Left) {
@@ -371,9 +355,25 @@ bool setMotorSpeed (uint8_t address, short spd, Motor *motor) {
 }
 
 /*
+	Set motor speeds
+
+	The left and right motor speeds may be different.
+*/
+void setGearMotors (uint8_t address, short rightSpd, Motor *rightM1, short leftSpd, Motor *leftM2) {
+	bool leftDir, rightDir;
+
+	console.println(F("Setting motor speeds.."));
+
+	leftDir = setGearMotorSpeed(address, leftSpd, leftM2);
+	rightDir = setGearMotorSpeed(address, rightSpd, rightM1);
+
+	updateGearMotors(address, rightDir, rightM1, leftDir, leftM2);
+}
+
+/*
 	Update motor data
 */
-void updateMotors (uint8_t address, bool rightDir, Motor *rightM1, bool leftDir, Motor *leftM2) {
+void updateGearMotors (uint8_t address, bool rightDir, Motor *rightM1, bool leftDir, Motor *leftM2) {
 	bool direction, valid;
 	uint8_t speedStatus;
 	uint32_t speed;
@@ -497,7 +497,7 @@ void setup (void) {
 
 		//	Let's see if we can move the motors forward
 		console.println(F("Moving the motors forward for 10 seconds in setup.."));
-		setMotors(roboClawAddress1, 100, &rightMotorM1, 100, &leftMotorM2);
+		setGearMotors(roboClawAddress1, 100, &rightMotorM1, 100, &leftMotorM2);
 		displayRoboClawData(roboClawAddress1, &rightMotorM1, &leftMotorM2);
 
 		//	Wait 10 seconds
@@ -511,11 +511,14 @@ void setup (void) {
 
 		//	Stop the motors
 		console.println(F("Stopping the motors in setup.."));
-		setMotors(roboClawAddress1, 0, &rightMotorM1, 0, &leftMotorM2);
+		setGearMotors(roboClawAddress1, 0, &rightMotorM1, 0, &leftMotorM2);
+
+		//	Wait 2 seconds
+		wait(2);
 
 		//	Let's see if we can move the motors in reverse
 		console.println(F("Moving the motors in reverse for 10 seconds in setup.."));
-		setMotors(roboClawAddress1, -100, &rightMotorM1, -100, &leftMotorM2);
+		setGearMotors(roboClawAddress1, -100, &rightMotorM1, -100, &leftMotorM2);
 		displayRoboClawData(roboClawAddress1, &rightMotorM1, &leftMotorM2);
 
 		//	Wait 10 seconds
@@ -529,7 +532,7 @@ void setup (void) {
 
 		//	Stop the motors
 		console.println(F("Stopping the motors in setup.."));
-		setMotors(roboClawAddress1, 0, &rightMotorM1, 0, &leftMotorM2);
+		setGearMotors(roboClawAddress1, 0, &rightMotorM1, 0, &leftMotorM2);
 
 		//	Wait 5 seconds
 		wait(5);
