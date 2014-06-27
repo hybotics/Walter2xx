@@ -1125,7 +1125,7 @@ uint16_t scanArea (Servo *pan, int startDeg, int stopDeg, int incrDeg) {
 /*
 	Set the motor speed
 */
-uint16_t setMotorSpeed (ServoMotor *servoMotor, int spd, bool term) {
+uint16_t setServoMotorSpeed (ServoMotor *servoMotor, int spd, bool term) {
 	uint16_t errorStatus = 0;
 	uint16_t pulse = SERVO_CENTER_MS;
 	int motorSpeed = spd;

@@ -1324,12 +1324,12 @@ uint16_t scanArea (Servo *pan, int startDeg, int stopDeg, int incrDeg) {
 /*
 	Set the motor speed
 */
-uint16_t setMotorSpeed (ServoMotor *servoMotor, int spd, bool term) {
+uint16_t setServoMotorSpeed (ServoMotor *servoMotor, int spd, bool term) {
 	uint16_t errorStatus = 0;
 	uint16_t pulse = SERVO_CENTER_MS;
 	int motorSpeed = spd;
 
-	lastRoutine = String(F("setMotorSpeed"));
+	lastRoutine = String(F("setServoMotorSpeed"));
 
 	if ((spd < SERVO_MOTOR_MIN_SPEED) || (spd > SERVO_MOTOR_MAX_SPEED)) {
 		errorStatus = 501;
