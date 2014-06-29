@@ -1,6 +1,6 @@
 /*
 	Program: 	W.A.L.T.E.R. 2.0, Navigation_03x.h - Navigation Control Program sketch header file
-	Date:		26-Jun-2014
+	Date:		28-Jun-2014
 	Version:	0.3.0 ALPHA
 
 	Platform:	Arduino Mega 2560 ADK,
@@ -26,7 +26,7 @@
 #define	I2C_SLAVE_ADDRESS				0x50
 
 #define	BUILD_VERSION					"0.3.0"
-#define	BUILD_DATE 						"26-Jun-2014"
+#define	BUILD_DATE 						"28-Jun-2014"
 #define	BUILD_BOARD						"Arduino Mega 2560 ADK and Lynxmotion's SSC-32"
 
 #define	LOOP_DELAY_SECONDS				10
@@ -155,6 +155,10 @@
 
 #define ROBOCLAW_MOTOR_LEFT_NAME		"Left Gear Motor"
 #define ROBOCLAW_MOTOR_RIGHT_NAME		"Right Gear Motor"
+
+#define GEAR_MOTOR_RAMP_SPEED_INCR		20
+#define GEAR_MOTOR_RIGHT_RAMP_INCR		20
+#define GEAR_MOTOR_LEFT_RAMP_INCR		20
 
 /*********************************************************
 	Sound generation constants
@@ -419,7 +423,7 @@ struct ServoMotor {
 };
 
 //	DC Motors - Packet Serial control mode parameters
-struct Motor {
+struct GearMotor {
 	String descr;
 	MotorLocation location;
 
