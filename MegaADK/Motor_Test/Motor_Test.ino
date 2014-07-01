@@ -18,8 +18,8 @@
 
 /*
 	Program:		W.A.L.T.E.R. 2.0, Motor and Controller Test sketch
-	Date:			24-Jun-2014
-	Version:		0.1.0 Arduino Mega ADK - ALPHA
+	Date:			01-Jul-2014
+	Version:		0.1.1 Arduino Mega ADK - ALPHA
 
 	Purpose:		Test Motors and Motor Controllers
 						
@@ -94,16 +94,16 @@ uint8_t roboClawAddress1 = ROBOCLAW_SERIAL_BASE_ADDR;
 uint8_t roboClawAddress2 = ROBOCLAW_SERIAL_BASE_ADDR + 1;
 
 //	Left side motor (M1) - RoboClaw 2x5 Controller #1 (0x80)
-Motor leftMotorM2;
+GearMotor leftMotorM2;
 
 //	Right side motor (M2) - RoboClaw 2x5 Controller #1 (0x80)
-Motor rightMotorM1;
+GearMotor rightMotorM1;
 
 //	Front motor (M1) - RoboClaw 2x5 Controller #2 (0x81)
-Motor frontMotorM1;
+GearMotor frontMotorM1;
 
 //	Back motor (M2) - RoboClaw 2x5 Controller #2 (0x81)
-Motor backMotorM2;
+GearMotor backMotorM2;
 
 /*
 	Code starts here
@@ -159,36 +159,36 @@ void pulseDigital(int pin, int duration) {
 /*
 	Display the data for a given motor
 */
-void displayMotor (Motor *motor, String name) {
-	console.print(motor->name);
-	console.println(F(" Motor:"));
+void displayGearMotor (GearMotor *gearMotor) {
+	console.print(gearMotor->name);
+	console.println(F(" Gear Motor:"));
 
 	//	Using Packet Serial
 	console.print(F("Encoder is valid: "));
 
-	if (motor->encoderValid) {
+	if (gearMotor->encoderValid) {
 		console.print(F("Yes, Status: "));
-		console.print(motor->encoderStatus);
+		console.print(gearMotor->encoderStatus);
 		console.print(F(", Value: "));
-		console.println(motor->encoder);
+		console.println(gearMotor->encoder);
 	} else {
 		console.println(F("No"));
 	}
 
 	console.print(F("Speed is valid: "));
 
-	if (motor->speedValid) {
+	if (gearMotor->speedValid) {
 		console.print(F("Yes, Status: "));
-		console.print(motor->speedStatus);
+		console.print(gearMotor->speedStatus);
 		console.print(F(", Speed: "));
-		console.println(motor->speed);
+		console.println(gearMotor->speed);
 	} else {
 		console.println(F("No"));
 	}
 
 	console.print(F("Moving "));
 
-	if (motor->forward) {
+	if (gearMotor->forward) {
 		console.print(F("Forward"));
 	} else {
 		console.print(F("Reverse"));
@@ -196,9 +196,9 @@ void displayMotor (Motor *motor, String name) {
 
 	console.print(F("Distance is valid: "));
 
-	if (motor->distanceValid) {
+	if (gearMotor->distanceValid) {
 		console.print(F("Yes, Distance: "));
-		console.println(motor->distance);
+		console.println(gearMotor->distance);
 	} else {
 		console.println(F("No"));
 	}
@@ -207,7 +207,7 @@ void displayMotor (Motor *motor, String name) {
 /*
 	Display data from the RoboClaw 2x5 motor controller
 */
-void displayRoboClawData (uint8_t address, Motor *leftMotorM2, Motor *rightMotorM1) {
+void displayRoboClawData (uint8_t address, GearMotor *rightMotorM1, GearMotor *leftMotorM2) {
 	char version[32];
 
 	roboClaw.ReadVersion(address, version);
@@ -216,20 +216,6 @@ void displayRoboClawData (uint8_t address, Motor *leftMotorM2, Motor *rightMotor
 	console.print(version);
 	console.println(F(")"));
 	console.println();
-
-    if (leftMotorM2->encoderValid) {
-		console.print(F("Left Motor Encoder = "));
-		console.print(leftMotorM2->encoder, DEC);
-		console.print(F(", Status =  "));
-		console.print(leftMotorM2->encoderStatus, HEX);
-		console.println();
-	}
-
-	if (leftMotorM2->speedValid) {
-		console.print(F("Left Motor Speed = "));
-		console.print(leftMotorM2->speed, DEC);
-		console.println();
-	}
 
 	if (rightMotorM1->encoderValid) {
 		console.print(F("Right Motor Encoder = "));
@@ -242,6 +228,20 @@ void displayRoboClawData (uint8_t address, Motor *leftMotorM2, Motor *rightMotor
 	if (rightMotorM1->speedValid) {
 		console.print(F("Right Motor Speed = "));
 		console.print(rightMotorM1->speed, DEC);
+		console.println();
+	}
+
+    if (leftMotorM2->encoderValid) {
+		console.print(F("Left Motor Encoder = "));
+		console.print(leftMotorM2->encoder, DEC);
+		console.print(F(", Status =  "));
+		console.print(leftMotorM2->encoderStatus, HEX);
+		console.println();
+	}
+
+	if (leftMotorM2->speedValid) {
+		console.print(F("Left Motor Speed = "));
+		console.print(leftMotorM2->speed, DEC);
 		console.println();
 	}
 	
@@ -283,39 +283,37 @@ void displayServo (Servo *servo) {
 /*
 	Read current data from the RoboClaw 2x5 Motor Controller
 */
-uint16_t readRoboClawData (uint8_t address, Motor *leftM1, Motor *rightM2) {
+uint16_t readRoboClawData (uint8_t address, GearMotor *rightM1, GearMotor *leftM2) {
+	//	Error control
+	uint16_t errorStatus = 0;
+
 	bool valid;
 	uint8_t status;
-
-	//	Error control
-	uint16_t errorStatus;
 	String errorMsg;
-
-	errorStatus = 0;
-
-	console.println(F("Reading Left Motor Encoder.."));
-
-	leftM1->encoder = roboClaw.ReadEncM1(address, &status, &valid);
-	leftM1->encoderStatus = status;
-	leftM1->encoderValid = valid;
-
-	console.println(F("Reading Left Motor Speed.."));
-
-	leftM1->speed = roboClaw.ReadSpeedM1(address, &status, &valid);
-	leftM1->speedStatus = status;
-	leftM1->speedValid = valid;
 
 	console.println(F("Reading Right Motor Encoder.."));
 
-	rightM2->encoder = roboClaw.ReadEncM2(address, &status, &valid);
-	rightM2->encoderStatus = status;
-	rightM2->encoderValid = valid;
+	rightM1->encoder = roboClaw.ReadEncM2(address, &status, &valid);
+	rightM1->encoderStatus = status;
+	rightM1->encoderValid = valid;
 
 	console.println(F("Reading Right Motor Speed.."));
 
-	rightM2->speed = roboClaw.ReadSpeedM2(address, &status, &valid);
-	rightM2->speedStatus = status;
-	rightM2->speedValid = valid;
+	rightM1->speed = roboClaw.ReadSpeedM2(address, &status, &valid);
+	rightM1->speedStatus = status;
+	rightM1->speedValid = valid;
+
+	console.println(F("Reading Left Motor Encoder.."));
+
+	leftM2->encoder = roboClaw.ReadEncM1(address, &status, &valid);
+	leftM2->encoderStatus = status;
+	leftM2->encoderValid = valid;
+
+	console.println(F("Reading Left Motor Speed.."));
+
+	leftM2->speed = roboClaw.ReadSpeedM1(address, &status, &valid);
+	leftM2->speedStatus = status;
+	leftM2->speedValid = valid;
 
 	return errorStatus;
 }
@@ -328,30 +326,32 @@ uint16_t readRoboClawData (uint8_t address, Motor *leftM1, Motor *rightM2) {
 /*	RoboClaw 2x5 Motor Controller routines 							*/
 /********************************************************************/
 
-bool setGearMotorSpeed (uint8_t address, short spd, Motor *motor) {
-	bool direction;
+uint16_t setGearMotorSpeed (uint8_t address, GearMotor *gearMotor, short spd) {
+	uint16_t errorStatus = 0;
 
-	if (motor->location == Left) {
+	if (gearMotor->location == Left) {
 		//	Set left motor speed
 		if (spd >= 0) {
 			roboClaw.ForwardM1(address, spd);
-			direction = true;
+			gearMotor->forward = true;
 		} else {
 			roboClaw.BackwardM1(address, -spd);
-			direction = false;
+			gearMotor->forward = false;
 		}
-	} else {
+	} else if (gearMotor->location == Right) {
 		//	Set right motor speed
 		if (spd >= 0) {
 			roboClaw.ForwardM2(address, spd);
-			direction = true;
+			gearMotor->forward = true;
 		} else {
 			roboClaw.BackwardM2(address, -spd);
-			direction = false;
+			gearMotor->forward = false;
 		}
+	} else {
+		errorStatus = 601;
 	}
 
-	return direction;
+	return errorStatus;
 }
 
 /*
@@ -359,23 +359,24 @@ bool setGearMotorSpeed (uint8_t address, short spd, Motor *motor) {
 
 	The left and right motor speeds may be different.
 */
-void setGearMotors (uint8_t address, short rightSpd, Motor *rightM1, short leftSpd, Motor *leftM2) {
+void setGearMotors (uint8_t address, GearMotor *rightM1, short rightSpd, GearMotor *leftM2, short leftSpd) {
+	uint16_t errorStatus = 0;
 	bool leftDir, rightDir;
 
 	console.println(F("Setting motor speeds.."));
 
-	leftDir = setGearMotorSpeed(address, leftSpd, leftM2);
-	rightDir = setGearMotorSpeed(address, rightSpd, rightM1);
+	errorStatus = setGearMotorSpeed(address, rightM1, rightSpd);
+	errorStatus = setGearMotorSpeed(address, leftM2, leftSpd);
 
-	updateGearMotors(address, rightDir, rightM1, leftDir, leftM2);
+	updateGearMotors(address, rightM1, leftM2);
 }
 
 /*
 	Update motor data
 */
-void updateGearMotors (uint8_t address, bool rightDir, Motor *rightM1, bool leftDir, Motor *leftM2) {
-	bool direction, valid;
-	uint8_t speedStatus;
+void updateGearMotors (uint8_t address, GearMotor *rightM1, GearMotor *leftM2) {
+        bool valid;
+  	uint8_t speedStatus;
 	uint32_t speed;
 
 	console.println(F("Updating motors.."));
@@ -386,7 +387,6 @@ void updateGearMotors (uint8_t address, bool rightDir, Motor *rightM1, bool left
 	rightM1->speed = speed;
 	rightM1->speedStatus = speedStatus;
 	rightM1->speedValid = valid;
-	rightM1->forward = direction;
 
 	//	Update left motor data
 	speed = roboClaw.ReadSpeedM2(address, &speedStatus, &valid);
@@ -394,7 +394,6 @@ void updateGearMotors (uint8_t address, bool rightDir, Motor *rightM1, bool left
 	leftM2->speed = speed;
 	leftM2->speedStatus = speedStatus;
 	leftM2->speedValid = valid;
-	leftM2->forward = direction;
 }
 
 /********************************************************************/
@@ -404,7 +403,7 @@ void updateGearMotors (uint8_t address, bool rightDir, Motor *rightM1, bool left
 /*
 	Initialize the RoboClaw 2x5 motor controller
 */
-void initRoboClaw (uint8_t address, uint16_t bps, Motor *rightM1, Motor *leftM2) {
+void initRoboClaw (uint8_t address, uint16_t bps, GearMotor *rightM1, GearMotor *leftM2) {
 	console.print(F("Initializing the RoboClaw 2x5 Motor Controller at address "));
 	console.print(address, HEX);
 	console.print(F(", for "));
@@ -497,11 +496,11 @@ void setup (void) {
 
 		//	Let's see if we can move the motors forward
 		console.println(F("Moving the motors forward for 10 seconds in setup.."));
-		setGearMotors(roboClawAddress1, 100, &rightMotorM1, 100, &leftMotorM2);
+		setGearMotors(roboClawAddress1, &rightMotorM1, WALTER_DEFAULT_MOVE_SPEED, &leftMotorM2, WALTER_DEFAULT_MOVE_SPEED);
 		displayRoboClawData(roboClawAddress1, &rightMotorM1, &leftMotorM2);
 
 		//	Wait 10 seconds
-		wait(10);
+		wait(2);
 
 		console.println(F("Data after moving forward.."));
 		displayRoboClawData(roboClawAddress1, &rightMotorM1, &leftMotorM2);
@@ -511,18 +510,18 @@ void setup (void) {
 
 		//	Stop the motors
 		console.println(F("Stopping the motors in setup.."));
-		setGearMotors(roboClawAddress1, 0, &rightMotorM1, 0, &leftMotorM2);
+		setGearMotors(roboClawAddress1, &rightMotorM1, 0, &leftMotorM2, 0);
 
 		//	Wait 2 seconds
 		wait(2);
 
 		//	Let's see if we can move the motors in reverse
 		console.println(F("Moving the motors in reverse for 10 seconds in setup.."));
-		setGearMotors(roboClawAddress1, -100, &rightMotorM1, -100, &leftMotorM2);
+		setGearMotors(roboClawAddress1, &rightMotorM1, -WALTER_DEFAULT_MOVE_SPEED, &leftMotorM2, -WALTER_DEFAULT_MOVE_SPEED);
 		displayRoboClawData(roboClawAddress1, &rightMotorM1, &leftMotorM2);
 
 		//	Wait 10 seconds
-		wait(10);
+		wait(2);
 
 		console.println(F("Data after moving in reverse.."));
 		displayRoboClawData(roboClawAddress1, &rightMotorM1, &leftMotorM2);
@@ -532,7 +531,7 @@ void setup (void) {
 
 		//	Stop the motors
 		console.println(F("Stopping the motors in setup.."));
-		setGearMotors(roboClawAddress1, 0, &rightMotorM1, 0, &leftMotorM2);
+		setGearMotors(roboClawAddress1, &rightMotorM1, 0, &leftMotorM2, 0);
 
 		//	Wait 5 seconds
 		wait(5);

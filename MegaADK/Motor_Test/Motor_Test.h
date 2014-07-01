@@ -18,8 +18,8 @@
 
 /*
 	Program:      	W.A.L.T.E.R. 2.0, Motor Test sketch, header file
-	Date:         	24-Jun-2014
-	Version:      	0.1.0 Arduino Mega R3 - ALPHA
+	Date:         	01-Jul-2014
+	Version:      	0.1.1 Arduino Mega ADK - ALPHA
 
 	Purpose:		Added definitions for SoftwareSerial ports for the SSC-32 and RoboClaw 2x5
 
@@ -42,8 +42,8 @@
 
 #define	NAV_I2C_ADDRESS					0x50
 
-#define	BUILD_VERSION					"0.1.0"
-#define	BUILD_DATE 						"24-Jun-2014"
+#define	BUILD_VERSION					"0.1.1"
+#define	BUILD_DATE 						"01-Jul-2014"
 #define	BUILD_BOARD						"Arduino Mega R3"
 
 #define	COLOR_SENSOR_LED				53
@@ -98,6 +98,13 @@
 #define	IR_BACK_CENTER					1
 #define	IR_BACK_LEFT					2
 #define	IR_BACK_RIGHT					3
+
+/************************************************************/
+/*	Settings for W.A.L.T.E.R.								*/
+/************************************************************/
+
+#define WALTER_DEFAULT_MOVE_TIME_MS		2000
+#define WALTER_DEFAULT_MOVE_SPEED		25
 
 //	RoboClaw 2x5 Motor Controller Packet Serial constants
 #define	ROBOCLAW_CONTROLLERS			1
@@ -196,6 +203,18 @@
 	Structs for data we store on various onboard devices
 *********************************************************/
 
+enum Distance {
+	Closest,
+	Farthest,
+};
+
+enum MotorLocation {
+	Left,
+	Right,
+	Back,
+	Front
+};
+
 struct AreaScanReading {
 	float ir;
 	uint8_t ping;
@@ -203,11 +222,6 @@ struct AreaScanReading {
 	struct HeatSensor *heatData;
 
 	int positionDeg;
-};
-
-enum Distance {
-	Closest,
-	Farthest,
 };
 
 struct DistanceReading {
@@ -238,12 +252,7 @@ struct HeatSensor {
 	float objectTemp;
 };
 
-enum MotorLocation {
-	Left,
-	Right,
-};
-
-struct Motor {
+struct GearMotor {
 	String name;
 	MotorLocation location;
 
@@ -295,7 +304,7 @@ struct Servo {
 
 struct ServoMotor {
 	/*
-		R/C PWM control mode parameters
+		R/C PWM control mode parameters for continuous rotation servos
 	*/
 	uint8_t pin;
 	String name;
