@@ -1,7 +1,7 @@
 /*
 	Program: 	W.A.L.T.E.R. 2.0, Navigation_03x.h - Navigation Control Program sketch header file
-	Date:		28-Jun-2014
-	Version:	0.3.0 ALPHA
+	Date:		01-Jul-2014
+	Version:	0.3.1 ALPHA
 
 	Platform:	Arduino Mega 2560 ADK,
 					Lynxmotion's SSC-32 Servo Controller,
@@ -25,8 +25,8 @@
 
 #define	I2C_SLAVE_ADDRESS				0x50
 
-#define	BUILD_VERSION					"0.3.0"
-#define	BUILD_DATE 						"28-Jun-2014"
+#define	BUILD_VERSION					"0.3.1"
+#define	BUILD_DATE 						"01-Jul-2014"
 #define	BUILD_BOARD						"Arduino Mega 2560 ADK and Lynxmotion's SSC-32"
 
 #define	LOOP_DELAY_SECONDS				10
@@ -60,9 +60,21 @@
 
 #define HAVE_7SEGMENT_DISPLAYS			false
 
-/*********************************************************
-	Arduino Mega ADK (Arduino) Settings
-*********************************************************/
+/************************************************************/
+/*	Settings for W.A.L.T.E.R.								*/
+/************************************************************/
+
+#define ROVER_DEFAULT_MOVE_TIME_MS		2000
+#define ROVER_DEFAULT_MOVE_SPEED		25
+#define ROVER_DEFAULT_RAMP_INCR			10
+
+#define ROVER_DEFAULT_SCAN_START_DEG	-90
+#define ROVER_DEFAULT_SCAN_END_DEG		90
+#define ROVER_DEFAULT_SCAN_INCR_DEG		10
+
+/************************************************************/
+/*	Arduino Mega ADK (Arduino) settings 					*/
+/************************************************************/
 
 //	For the toneAC tone library
 #define SPEAKER_OUT_ONE					11
@@ -157,16 +169,17 @@
 #define ROBOCLAW_MOTOR_RIGHT_NAME		"Right Gear Motor"
 
 #define GEAR_MOTOR_RAMP_SPEED_INCR		20
+
 #define GEAR_MOTOR_RIGHT_RAMP_INCR		20
 #define GEAR_MOTOR_LEFT_RAMP_INCR		20
 
-/*********************************************************
-	Sound generation constants
-*********************************************************/
+/************************************************************/
+/*	Sound generation constants								*/
+/************************************************************/
 
-/*********************************************************
-	Lynxmotion SSC-32 Servo Controller Settings
-*********************************************************/
+/************************************************************/
+/*	Lynxmotion SSC-32 Servo Controller settings 			*/
+/************************************************************/
 
 #define	SERVO_MAX_DEGREES				90
 #define	SERVO_CENTER_MS					1500
@@ -310,9 +323,9 @@
 #define	SERVO_MOTOR_REVERSE_09			-800
 #define	SERVO_MOTOR_REVERSE_10			-975
 
-/*********************************************************
-	Structs for data we store on various onboard devices
-*********************************************************/
+/************************************************************/
+/*	Structs for data we store on various onboard devices 	*/
+/************************************************************/
 
 typedef enum MotorLocation {
 	Left,

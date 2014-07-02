@@ -1,7 +1,7 @@
 /*
 	Program:    	W.A.L.T.E.R., Navigation_03x - Master Control Program (MCP) sketch
-	Date:       	28-Jun-2014
-	Version:    	0.3.0 ALPHA
+	Date:       	01-Jul-2014
+	Version:    	0.3.1 ALPHA
 
 	Platform:		Arduino Mega 2560 ADK,
 						Lynxmotion's SSC-32 Servo Controller,
@@ -144,6 +144,9 @@
 					*********************************************************************************
 					Compiles clean now, but there is still stuff to do. I need to write the
 						setGearMotorSpeed() routine, and other stuff.
+					---------------------------------------------------------------------------------
+					v0.3.1 ALPHA 01-Jul-2014:
+					Starting new work.
 					---------------------------------------------------------------------------------
 
 	Dependencies:	Adafruit libraries:
@@ -334,7 +337,9 @@ uint8_t temperatureMinuteCount = 0;
 */
 uint8_t currentMinute = 0;
 uint8_t lastMinute = -1;
-long minuteCount = 0;						//	Count the time, in minutes, since we were last restarted
+
+//	Count the time, in minutes, since we were last restarted
+long minuteCount = 0;
 
 //	Enable run once only loop code to run
 bool firstLoop = true;
@@ -395,37 +400,10 @@ uint8_t roboClawAddress2 = ROBOCLAW_SERIAL_BASE_ADDR + 1;
 /************************************************************/
 
 //	These are real DC motors
-GearMotor leftGearMotorM2, rightGearMotorM1;
+GearMotor rightGearMotorM1, leftGearMotorM2;
 
 //	Standard R/C servos
 Servo cameraPan, cameraTilt, gripLift, gripElbow, gripWrist, gripGrab, mainPan, mainTilt, leftTilt, rightTilt;
-
-//	Continuous rotation servo motors
-ServoMotor leftServoMotorM1 = {
-	SERVO_MOTOR_LEFT_PIN,
-	SERVO_MOTOR_LEFT_NAME,
-	SERVO_MOTOR_LEFT_OFFSET,
-	SERVO_MOTOR_LEFT_SPEED_ADJ,
-	SERVO_MOTOR_LEFT_DIRECTION,
-	SERVO_MOTOR_LEFT_NEUTRAL,
-	SERVO_MOTOR_LEFT_MIN,
-	SERVO_MOTOR_LEFT_MAX,
-	0,
-	0
-};
-
-ServoMotor rightServoMotorM2 = {
-	SERVO_MOTOR_RIGHT_PIN,
-	SERVO_MOTOR_RIGHT_NAME,
-	SERVO_MOTOR_RIGHT_OFFSET,
-	SERVO_MOTOR_RIGHT_SPEED_ADJ,
-	SERVO_MOTOR_RIGHT_DIRECTION,
-	SERVO_MOTOR_RIGHT_NEUTRAL,
-	SERVO_MOTOR_RIGHT_MIN,
-	SERVO_MOTOR_RIGHT_MAX,
-	0,
-	0
-};
 
 //	Total number of area readings taken, or -1 if data is not valid
 int nrAreaReadings;
@@ -440,90 +418,23 @@ float ir[MAX_NUMBER_IR];
 AreaScanReading areaScan[MAX_NUMBER_AREA_READINGS];
 bool areaScanValid = false;
 
-/****************************************************************************/
-/*	Seven Segment and 8x8 Matrix Display routines							*/
-/****************************************************************************/
- 
-/*
-    Write a floating point value to the 7-Segment display, such as the 0.56"
-      4 digit displays with I2C backpacks, sold by Adafruit.
-
-    Multiple 7 segment displays are supported automatically. You just have to
-      set the number of displays in the IMU_Multi_Display.h and set the proper
-      I2C addresses for the displays. The base address is 0x70, as shipped by
-      Adafruit. Up to 8 of these displays are supported, with the 
-      being
-      highest addressed display farthest to the left, and decreasing addresses
-      moving to the right. The lowest addressed (0x70) display has to be at the
-      far right for this to work.
-*/
-
-/*
-	Write a number (integer or floating point) to a 7-Segment display
-*/
-void writeNumber (uint8_t displayNr, uint16_t value, uint8_t decimal = 2, bool noblank = false) {
-	uint8_t digitCount = 1, temp = 0;
-	bool decimalPoint = false;
-
-	temp = value / 100;
-/*  
-	console.print(F*"(writeNumber) value = "));
-	console.print(value);
-	console.print(F(", temp = "));
-	console.println(temp);
-*/
-
-  //	Set first digit of the integer portion
-	if ((noblank) or (temp > 9)) {
-/*    
-    console.print(F("(writeNumber) digit = "));
-    console.println(digit);
-*/
-
-		decimalPoint = ((digitCount) == decimal);
-		sevenSeg[displayNr].writeDigitNum(0, int(temp / 10), decimalPoint);  //  Tens
-  } else {
-	    sevenSeg[displayNr].clear();
-  }
-
-	//	Set the second digit of the integer portion
-	digitCount += 1;
-	decimalPoint = ((digitCount) == decimal);
-	sevenSeg[displayNr].writeDigitNum(1, temp % 10, decimalPoint);         //  Ones
-
-	//	Set the first digit of the decimal portion
-	temp = value % 100;
-	digitCount += 1;
-	decimalPoint = ((digitCount) == decimal);
-	sevenSeg[displayNr].writeDigitNum(3, int(temp / 10), decimalPoint);    //  Tens
-
-	//	Set the second digit of the decimal portion
-	digitCount += 1;
-	decimalPoint = ((digitCount) == decimal);
-	sevenSeg[displayNr].writeDigitNum(4, temp % 10, decimalPoint);         //  Ones
-}
-
-/*
-	Clear all the seven segment and matrix displays
-*/
-void clearDisplays (void) {
-	uint8_t nrDisp = 0;
-
-	while (nrDisp < MAX_NUMBER_7SEG_DISPLAYS) {
-		sevenSeg[nrDisp].clear();
-		sevenSeg[nrDisp].drawColon(false);
-		sevenSeg[nrDisp].writeDisplay();
-
-		nrDisp += 1;
-	}
-
-	matrix8x8.clear();
-	matrix8x8.writeDisplay();
-}
-
 /************************************************************/
 /*	Utility routines										*/
 /************************************************************/
+
+/*
+	Show announcement message on the desired port.
+*/
+void announce (BMSerial *port) {
+	port->println();
+	port->print("SES Rover Master Control Program (MCP), version ");
+	port->print(BUILD_VERSION);
+	port->print(" on ");
+	port->println(BUILD_DATE);
+	port->print("  for the ");
+	port->print(BUILD_BOARD);
+	port->println(".");
+}
 
 /*
     Left zero pad a numeric string
@@ -543,39 +454,6 @@ String leftZeroPadString (String st, uint8_t nrPlaces) {
   }
 
   return newStr;
-}
-
-/*
-    Convert a pulse width in ms to inches
-*/
-long microsecondsToInches (long microseconds) {
-	/*
-		According to Parallax's datasheet for the PING))), there are
-			73.746 microseconds per inch (i.e. sound travels at 1130 feet per
-			second).  This gives the distance travelled by the ping, outbound
-			and return, so we divide by 2 to get the distance of the obstacle.
-		See: http://www.parallax.com/dl/docs/prod/acc/28015-PING-v1.3.pdf
-	*/
-
-	lastRoutine = String(F("microsecondsToInches"));
-	
-	return microseconds / 74 / 2;
-}
-
-/*
-    Convert a pulse width in ms to a distance in cm
-*/
-long microsecondsToCentimeters (long microseconds) {
-	/*
-		The speed of sound is 340 m/s or 29 microseconds per centimeter.
-
-		The ping travels out and back, so to find the distance of the
-			object we take half of the distance travelled.
-	*/
-
-	lastRoutine = String(F("microsecondsToCentimeters"));
-
-	return microseconds / 29 / 2;
 }
 
 /*
@@ -653,19 +531,26 @@ void wait (uint8_t nrSeconds, String text = "") {
 
 	console.println();
 }
+/****************************************************************************/
+/*	Seven Segment and 8x8 Matrix Display routines							*/
+/****************************************************************************/
 
 /*
-	Show announcement message on the desired port.
+	Clear all the seven segment and matrix displays
 */
-void announce (BMSerial *port) {
-	port->println();
-	port->print("SES Rover Master Control Program (MCP), version ");
-	port->print(BUILD_VERSION);
-	port->print(" on ");
-	port->println(BUILD_DATE);
-	port->print("  for the ");
-	port->print(BUILD_BOARD);
-	port->println(".");
+void clearDisplays (void) {
+	uint8_t nrDisp = 0;
+
+	while (nrDisp < MAX_NUMBER_7SEG_DISPLAYS) {
+		sevenSeg[nrDisp].clear();
+		sevenSeg[nrDisp].drawColon(false);
+		sevenSeg[nrDisp].writeDisplay();
+
+		nrDisp += 1;
+	}
+
+	matrix8x8.clear();
+	matrix8x8.writeDisplay();
 }
 
 /*
@@ -691,6 +576,66 @@ void testDisplays (uint8_t totalDisplays) {
 
 	clearDisplays();
 }
+ 
+/*
+    Write a floating point value to the 7-Segment display, such as the 0.56"
+      4 digit displays with I2C backpacks, sold by Adafruit.
+
+    Multiple 7 segment displays are supported automatically. You just have to
+      set the number of displays in the IMU_Multi_Display.h and set the proper
+      I2C addresses for the displays. The base address is 0x70, as shipped by
+      Adafruit. Up to 8 of these displays are supported, with the 
+      being
+      highest addressed display farthest to the left, and decreasing addresses
+      moving to the right. The lowest addressed (0x70) display has to be at the
+      far right for this to work.
+*/
+
+/*
+	Write a number (integer or floating point) to a 7-Segment display
+*/
+void writeNumber (uint8_t displayNr, uint16_t value, uint8_t decimal = 2, bool noblank = false) {
+	uint8_t digitCount = 1, temp = 0;
+	bool decimalPoint = false;
+
+	temp = value / 100;
+/*  
+	console.print(F*"(writeNumber) value = "));
+	console.print(value);
+	console.print(F(", temp = "));
+	console.println(temp);
+*/
+
+  //	Set first digit of the integer portion
+	if ((noblank) or (temp > 9)) {
+/*    
+    console.print(F("(writeNumber) digit = "));
+    console.println(digit);
+*/
+
+		decimalPoint = ((digitCount) == decimal);
+		sevenSeg[displayNr].writeDigitNum(0, int(temp / 10), decimalPoint);  //  Tens
+  } else {
+	    sevenSeg[displayNr].clear();
+  }
+
+	//	Set the second digit of the integer portion
+	digitCount += 1;
+	decimalPoint = ((digitCount) == decimal);
+	sevenSeg[displayNr].writeDigitNum(1, temp % 10, decimalPoint);         //  Ones
+
+	//	Set the first digit of the decimal portion
+	temp = value % 100;
+	digitCount += 1;
+	decimalPoint = ((digitCount) == decimal);
+	sevenSeg[displayNr].writeDigitNum(3, int(temp / 10), decimalPoint);    //  Tens
+
+	//	Set the second digit of the decimal portion
+	digitCount += 1;
+	decimalPoint = ((digitCount) == decimal);
+	sevenSeg[displayNr].writeDigitNum(4, temp % 10, decimalPoint);         //  Ones
+}
+
 
 /************************************************************/
 /*	Sound Generation routines								*/
@@ -810,6 +755,30 @@ void runAwayRobot (uint16_t errorStatus) {
 /*	Display routines										*/
 /************************************************************/
 
+/*
+	Display the LSM303DLHC Accelerometer/Magnetometer (Compass) data
+*/
+void displayAccelCompassData (lsm303dlhcData *acData) {
+
+	//	LMS303DLHC Accelerometer readings
+	console.println(F("Accelerometer Readings: X = "));
+	console.print(acData->accelX);
+	console.print(F(", Y = "));
+	console.print(acData->accelY);
+	console.print(F(", Z = "));
+	console.println(acData->accelZ);
+	console.println();
+
+	//	LMS303DLHC Magnetometer (Compass) readings
+	console.println(F("Magnetometer (Compass) Readings: X = "));
+	console.print(acData->compassX);
+	console.print(F(", Y = "));
+	console.print(acData->compassY);
+	console.print(F(", Z = "));
+	console.println(acData->compassZ);
+	console.println();
+}
+
 void displayAreaScanReadings (DistanceObject *distObj) {
 	uint8_t index;
 	AreaScanReading currentReading;
@@ -924,27 +893,51 @@ void displayHeatSensorData (HeatSensor *heatData) {
 }
 
 /*
-	Display the LSM303DLHC Accelerometer/Magnetometer (Compass) data
+	Display the data for a given gear motor
 */
-void displayAccelCompassData (lsm303dlhcData *acData) {
+void displayGearMotor (GearMotor *gearMotor) {
+	console.print(gearMotor->descr);
+	console.println(F(" Motor:"));
 
-	//	LMS303DLHC Accelerometer readings
-	console.println(F("Accelerometer Readings: X = "));
-	console.print(acData->accelX);
-	console.print(F(", Y = "));
-	console.print(acData->accelY);
-	console.print(F(", Z = "));
-	console.println(acData->accelZ);
-	console.println();
+	//	Using Packet Serial
+	console.print(F("Encoder is valid: "));
 
-	//	LMS303DLHC Magnetometer (Compass) readings
-	console.println(F("Magnetometer (Compass) Readings: X = "));
-	console.print(acData->compassX);
-	console.print(F(", Y = "));
-	console.print(acData->compassY);
-	console.print(F(", Z = "));
-	console.println(acData->compassZ);
-	console.println();
+	if (gearMotor->encoderValid) {
+		console.print(F("Yes, Status: "));
+		console.print(gearMotor->encoderStatus);
+		console.print(F(", Value: "));
+		console.println(gearMotor->encoder);
+	} else {
+		console.println(F("No"));
+	}
+
+	console.print(F("Speed is valid: "));
+
+	if (gearMotor->speedValid) {
+		console.print(F("Yes, Status: "));
+		console.print(gearMotor->speedStatus);
+		console.print(F(", Speed: "));
+		console.println(gearMotor->mspeed);
+	} else {
+		console.println(F("No"));
+	}
+
+	console.print(F("Moving "));
+
+	if (gearMotor->forward) {
+		console.print(F("Forward"));
+	} else {
+		console.print(F("Reverse"));
+	}
+
+	console.print(F("Distance is valid: "));
+
+	if (gearMotor->distanceValid) {
+		console.print(F("Yes, Distance: "));
+		console.println(gearMotor->distance);
+	} else {
+		console.println(F("No"));
+	}
 }
 
 /*
@@ -958,22 +951,6 @@ void displayGyroData (l3gd20Data *gyroData) {
 	console.print(F(", Z = "));
 	console.println(gyroData->Z);
 	console.println();
-}
-
-/*
-	Display the BMP180 Temperature / Pressure Data
-*/
-void displayTemperatureData (bmp180Data *tempData) {
-	if (tempData->temperatureValid) {
-		console.print(F("Room Temperature = "));
-		console.print(tempData->fahrenheit);
-		console.print(F(" F, "));
-		console.print(tempData->celsius);
-		console.println(F(" C."));
-		console.println();
-	} else {
-		console.println(F("Temperature data is not valid."));
-	}
 }
 
 /*
@@ -1069,97 +1046,6 @@ void displayPING (void) {
 	console.println();
 }
 
-/*
-	Display the data for a given gear motor
-*/
-void displayGearMotor (GearMotor *gearMotor) {
-	console.print(gearMotor->descr);
-	console.println(F(" Motor:"));
-
-	//	Using Packet Serial
-	console.print(F("Encoder is valid: "));
-
-	if (gearMotor->encoderValid) {
-		console.print(F("Yes, Status: "));
-		console.print(gearMotor->encoderStatus);
-		console.print(F(", Value: "));
-		console.println(gearMotor->encoder);
-	} else {
-		console.println(F("No"));
-	}
-
-	console.print(F("Speed is valid: "));
-
-	if (gearMotor->speedValid) {
-		console.print(F("Yes, Status: "));
-		console.print(gearMotor->speedStatus);
-		console.print(F(", Speed: "));
-		console.println(gearMotor->mspeed);
-	} else {
-		console.println(F("No"));
-	}
-
-	console.print(F("Moving "));
-
-	if (gearMotor->forward) {
-		console.print(F("Forward"));
-	} else {
-		console.print(F("Reverse"));
-	}
-
-	console.print(F("Distance is valid: "));
-
-	if (gearMotor->distanceValid) {
-		console.print(F("Yes, Distance: "));
-		console.println(gearMotor->distance);
-	} else {
-		console.println(F("No"));
-	}
-}
-
-/*
-	Display data from a RoboClaw 2x5 motor controller
-*/
-void displayRoboClawData (uint8_t address, GearMotor *rightGM1, GearMotor *leftGM2) {
-	char version[32];
-
-	roboClaw.ReadVersion(address, version);
-
-	console.print(F("RoboClaw 2x5 status (version "));
-	console.print(version);
-	console.print(F("): "));
-	console.println();
-
-	if (rightGM1->encoderValid) {
-		console.print(F("Right Motor Encoder = "));
-		console.print(rightGM1->encoder, DEC);
-		console.print(F(", Status = "));
-		console.print(rightGM1->encoderStatus, HEX);
-		console.println();
-	}
-
-	if (rightGM1->speedValid) {
-		console.print(F("Right Motor Speed = "));
-		console.print(rightGM1->mspeed, DEC);
-		console.println();
-	}
-
-    if (leftGM2->encoderValid) {
-		console.print(F("Left Motor Encoder = "));
-		console.print(leftGM2->encoder, DEC);
-		console.print(F(", Status =  "));
-		console.print(leftGM2->encoderStatus, HEX);
-		console.println();
-	}
-
-	if (leftGM2->speedValid) {
-		console.print(F("Left Motor Speed = "));
-		console.print(leftGM2->mspeed, DEC);
-		console.println();
-	}
-	
-	console.println();
-}
 
 /*
 	Display servo data
@@ -1192,8 +1078,24 @@ void displayServo (Servo *servo) {
 	console.println();
 }
 
+/*
+	Display the BMP180 Temperature / Pressure Data
+*/
+void displayTemperatureData (bmp180Data *tempData) {
+	if (tempData->temperatureValid) {
+		console.print(F("Room Temperature = "));
+		console.print(tempData->fahrenheit);
+		console.print(F(" F, "));
+		console.print(tempData->celsius);
+		console.println(F(" C."));
+		console.println();
+	} else {
+		console.println(F("Temperature data is not valid."));
+	}
+}
+
 /************************************************************/
-/*	Sensor reading routines									*/
+/*	Sensor routines											*/
 /************************************************************/
 
 void calculatePitchRoll (InertialMeasurementUnit *imuData, sensors_event_t *accelEvent, sensors_event_t *compassEvent, sensors_vec_t *orientation) {
@@ -1202,6 +1104,39 @@ void calculatePitchRoll (InertialMeasurementUnit *imuData, sensors_event_t *acce
 
 	//	Calculate the heading using the raw magnetometer (compass)
 	imuData->headingValid = imu.magGetOrientation(SENSOR_AXIS_Z, compassEvent, orientation);
+}
+
+/*
+    Convert a pulse width in ms to inches
+*/
+long microsecondsToInches (long microseconds) {
+	/*
+		According to Parallax's datasheet for the PING))), there are
+			73.746 microseconds per inch (i.e. sound travels at 1130 feet per
+			second).  This gives the distance travelled by the ping, outbound
+			and return, so we divide by 2 to get the distance of the obstacle.
+		See: http://www.parallax.com/dl/docs/prod/acc/28015-PING-v1.3.pdf
+	*/
+
+	lastRoutine = String(F("microsecondsToInches"));
+	
+	return microseconds / 74 / 2;
+}
+
+/*
+    Convert a pulse width in ms to a distance in cm
+*/
+long microsecondsToCentimeters (long microseconds) {
+	/*
+		The speed of sound is 340 m/s or 29 microseconds per centimeter.
+
+		The ping travels out and back, so to find the distance of the
+			object we take half of the distance travelled.
+	*/
+
+	lastRoutine = String(F("microsecondsToCentimeters"));
+
+	return microseconds / 29 / 2;
 }
 
 ColorSensor readColorSensor (void) {
@@ -1325,49 +1260,6 @@ InertialMeasurementUnit readIMU (void) {
 }
 
 /*
-	Read distance in cm from a Sharp GP2Y0A21YK0F IR sensor
-*/
-float readSharpGP2Y0A21YK0F (byte sensorNr) {
-	byte pin = sensorNr + IR_PIN_BASE;
-	int reading = analogRead(pin);
-	float distance = (6762.0 / (reading - 9)) - 4;
-
-	lastRoutine = String(F("readSharpGP2Y0A21YK0F"));
-
-	return distance;
-}
-
-/* 
-	Function to read a value from a GP2D12 infrared distance sensor and return a
-		distance value in centimeters.
-
-	This sensor should be used with a refresh rate of 36ms or greater.
-
-	Javier Valencia 2008
-
-	float readGP2D12(byte pin)
-
-	It can return -1 if something has gone wrong.
-
-	TODO: Make several readings over a time period, and average them
-		for the final reading.
-*/
-float readSharpGP2D12 (byte sensorNr) {
-	byte pin = sensorNr + IR_PIN_BASE;
-	int tmp;
-
-	lastRoutine = String(F("readSharpGP2D12"));
-
-	tmp = analogRead(pin);
-
-	if (tmp < 3) {
-		return -1.0;								// Invalid value
-	} else {
-		return (6787.0 /((float)tmp - 3.0)) - 4.0;	// Distance in cm
-	}
-}
-
-/*
 	Parallax Ping))) Sensor 
 
 	This routine reads a PING))) ultrasonic rangefinder and returns the
@@ -1434,9 +1326,95 @@ int readParallaxPING (byte sensorNr, boolean units = true) {
 	return result;
 }
 
+/* 
+	Function to read a value from a GP2D12 infrared distance sensor and return a
+		distance value in centimeters.
+
+	This sensor should be used with a refresh rate of 36ms or greater.
+
+	Javier Valencia 2008
+
+	float readGP2D12(byte pin)
+
+	It can return -1 if something has gone wrong.
+
+	TODO: Make several readings over a time period, and average them
+		for the final reading.
+*/
+float readSharpGP2D12 (byte sensorNr) {
+	byte pin = sensorNr + IR_PIN_BASE;
+	int tmp;
+
+	lastRoutine = String(F("readSharpGP2D12"));
+
+	tmp = analogRead(pin);
+
+	if (tmp < 3) {
+		return -1.0;								// Invalid value
+	} else {
+		return (6787.0 /((float)tmp - 3.0)) - 4.0;	// Distance in cm
+	}
+}
+
+/*
+	Read distance in cm from a Sharp GP2Y0A21YK0F IR sensor
+*/
+float readSharpGP2Y0A21YK0F (byte sensorNr) {
+	byte pin = sensorNr + IR_PIN_BASE;
+	int reading = analogRead(pin);
+	float distance = (6762.0 / (reading - 9)) - 4;
+
+	lastRoutine = String(F("readSharpGP2Y0A21YK0F"));
+
+	return distance;
+}
+
 /********************************************************************/
 /*	Orion Robotics RoboClaw 2x5 Motor Controller routines			*/
 /********************************************************************/
+/*
+	Display data from a RoboClaw 2x5 motor controller
+*/
+void displayRoboClawData (uint8_t address, GearMotor *rightGM1, GearMotor *leftGM2) {
+	char version[32];
+
+	roboClaw.ReadVersion(address, version);
+
+	console.print(F("RoboClaw 2x5 status (version "));
+	console.print(version);
+	console.print(F("): "));
+	console.println();
+
+	if (rightGM1->encoderValid) {
+		console.print(F("Right Motor Encoder = "));
+		console.print(rightGM1->encoder, DEC);
+		console.print(F(", Status = "));
+		console.print(rightGM1->encoderStatus, HEX);
+		console.println();
+	}
+
+	if (rightGM1->speedValid) {
+		console.print(F("Right Motor Speed = "));
+		console.print(rightGM1->mspeed, DEC);
+		console.println();
+	}
+
+    if (leftGM2->encoderValid) {
+		console.print(F("Left Motor Encoder = "));
+		console.print(leftGM2->encoder, DEC);
+		console.print(F(", Status =  "));
+		console.print(leftGM2->encoderStatus, HEX);
+		console.println();
+	}
+
+	if (leftGM2->speedValid) {
+		console.print(F("Left Motor Speed = "));
+		console.print(leftGM2->mspeed, DEC);
+		console.println();
+	}
+	
+	console.println();
+}
 
 /*
 	Initialize the RoboClaw 2x5 motor controller
@@ -1514,18 +1492,80 @@ uint16_t readRoboClawData (uint8_t address, GearMotor *rightGM1, GearMotor *left
 	return errorStatus;
 }
 
-uint16_t setGearMotorSpeed (GearMotor *gearMotor, short spd, short rampSpd = 0, bool unknown =  true) {
+uint16_t setGearMotorSpeed (uint8_t address, GearMotor *gearMotor, short spd, byte rampIncr = 0) {
 	uint16_t errorStatus = 0;
 
-	lastRoutine = String(F("setGearMotorSpeed"));
+	if (gearMotor->location == Left) {
+		//	Set left motor speed
+		if (spd >= 0) {
+			roboClaw.ForwardM1(address, spd);
+			gearMotor->forward = true;
+		} else {
+			roboClaw.BackwardM1(address, -spd);
+			gearMotor->forward = false;
+		}
+	} else if (gearMotor->location == Right) {
+		//	Set right motor speed
+		if (spd >= 0) {
+			roboClaw.ForwardM2(address, spd);
+			gearMotor->forward = true;
+		} else {
+			roboClaw.BackwardM2(address, -spd);
+			gearMotor->forward = false;
+		}
+	} else {
+		errorStatus = 601;
+	}
 
 	return errorStatus;
 }
 
 /*
+	Set motor speeds
+
+	The left and right motor speeds may be different.
+*/
+void setGearMotors (uint8_t address, GearMotor *rightM1, short rightSpd, GearMotor *leftM2, short leftSpd) {
+	uint16_t errorStatus = 0;
+	bool leftDir, rightDir;
+
+	console.println(F("Setting motor speeds.."));
+
+	errorStatus = setGearMotorSpeed(address, rightM1, rightSpd, ROVER_DEFAULT_RAMP_INCR);
+	errorStatus = setGearMotorSpeed(address, leftM2, leftSpd, ROVER_DEFAULT_RAMP_INCR);
+
+	updateGearMotors(address, rightM1, leftM2);
+}
+
+/*
+	Update motor data
+*/
+void updateGearMotors (uint8_t address, GearMotor *rightM1, GearMotor *leftM2) {
+        bool valid;
+  	uint8_t speedStatus;
+	uint32_t speed;
+
+	console.println(F("Updating motors.."));
+
+	//	Update right motor data
+	speed = roboClaw.ReadSpeedM1(address, &speedStatus, &valid);
+
+	rightM1->mspeed = speed;
+	rightM1->speedStatus = speedStatus;
+	rightM1->speedValid = valid;
+
+	//	Update left motor data
+	speed = roboClaw.ReadSpeedM2(address, &speedStatus, &valid);
+
+	leftM2->mspeed = speed;
+	leftM2->speedStatus = speedStatus;
+	leftM2->speedValid = valid;
+}
+
+/*
 	Stop both motors NOW
 */
-uint16_t stopGearMotors (GearMotor *rightM1, GearMotor *leftM2, short rightRampIncr = 0, short leftRampIncr = 0) {
+uint16_t stopGearMotors (uint8_t address, GearMotor *rightM1, GearMotor *leftM2, short rightRampIncr = 0, short leftRampIncr = 0) {
 	uint16_t errorStatus = 0;
 	short rightRamp = rightRampIncr, leftRamp = leftRampIncr;
 
@@ -1536,7 +1576,7 @@ uint16_t stopGearMotors (GearMotor *rightM1, GearMotor *leftM2, short rightRampI
 		rightRamp = GEAR_MOTOR_RIGHT_RAMP_INCR;
 	}
 
-	errorStatus = setGearMotorSpeed(rightM1, 0, rightRamp, false);
+	errorStatus = setGearMotorSpeed(address, rightM1, 0, rightRamp);
 
 	if (errorStatus != 0) {
 		processError(errorStatus, "Could not set the speed for the " + rightM1->descr + " motor");
@@ -1545,7 +1585,7 @@ uint16_t stopGearMotors (GearMotor *rightM1, GearMotor *leftM2, short rightRampI
 			leftRamp = GEAR_MOTOR_LEFT_RAMP_INCR;
 		}
 
-		errorStatus = setGearMotorSpeed(leftM2, 0, leftRamp, true);
+		errorStatus = setGearMotorSpeed(address, leftM2, 0, leftRamp);
 
 		if (errorStatus != 0) {
 			processError(errorStatus, "Could not set the speed for the " + leftM2->descr + " motor");
@@ -1791,7 +1831,7 @@ DistanceObject findDistanceObjects () {
 /*
 	Scan an arc of up to 180 degrees, and take sensor readings at each angle increment
 */
-uint16_t scanArea (Servo *pan, int startDeg, int stopDeg, int incrDeg) {
+uint16_t scanArea (uint8_t address, Servo *pan, int startDeg, int stopDeg, int incrDeg) {
 	uint16_t errorStatus = 0;
 	uint16_t readingNr = 0, nrReadings = 0;
 	int positionDeg = 0;
@@ -1832,7 +1872,7 @@ uint16_t scanArea (Servo *pan, int startDeg, int stopDeg, int incrDeg) {
 			*/
 
 			//	Stop, so we can do this scan
-			errorStatus = stopGearMotors(&rightGearMotorM1, &leftGearMotorM2);
+			errorStatus = stopGearMotors(address, &rightGearMotorM1, &leftGearMotorM2);
 
 			if (errorStatus != 0) {
 				runAwayRobot(errorStatus);
@@ -1899,21 +1939,21 @@ uint16_t scanArea (Servo *pan, int startDeg, int stopDeg, int incrDeg) {
 /*
 	Turn towards the farthest detected object
 */
-uint16_t turnToFarthestObject (DistanceObject *distObj, Servo *pan) {
+uint16_t turnToFarthestObject (uint8_t address, GearMotor *rightM1, GearMotor *leftM2, DistanceObject *distObj, Servo *pan) {
 	uint16_t errorStatus = 0;
 
 	if (distObj->farthestPosPING < 0) {
 		//	Turn to the right
-		errorStatus = setGearMotorSpeed(&rightGearMotorM1, -50, 0, false);
+		errorStatus = setGearMotorSpeed(address, rightM1, -ROVER_DEFAULT_RAMP_INCR, ROVER_DEFAULT_RAMP_INCR);
 
 		if (errorStatus == 0) {
-			errorStatus = setGearMotorSpeed(&leftGearMotorM2, 50, 0, true);
+			errorStatus = setGearMotorSpeed(address, leftM2, ROVER_DEFAULT_MOVE_SPEED, ROVER_DEFAULT_RAMP_INCR);
 			delay(1000);
 		}
 
 		if (errorStatus == 0) {
 			//	Start moving forward again
-			errorStatus = setGearMotorSpeed(&rightGearMotorM1, 50, 0, true);
+			errorStatus = setGearMotorSpeed(address, rightM1, ROVER_DEFAULT_MOVE_SPEED, ROVER_DEFAULT_RAMP_INCR);
 		}
 
 		if (errorStatus != 0) {
@@ -1921,16 +1961,16 @@ uint16_t turnToFarthestObject (DistanceObject *distObj, Servo *pan) {
 		}
 	} else if (distObj->farthestPosPING > 0) {
 		//	Turn to the left
-		errorStatus = setGearMotorSpeed(&rightGearMotorM1, 50, 0, false);
+		errorStatus = setGearMotorSpeed(address, rightM1, ROVER_DEFAULT_MOVE_SPEED, ROVER_DEFAULT_RAMP_INCR);
 
 		if (errorStatus == 0) {
-			errorStatus = setGearMotorSpeed(&leftGearMotorM2, -50, 0, true);
+			errorStatus = setGearMotorSpeed(address, leftM2, -ROVER_DEFAULT_MOVE_SPEED, ROVER_DEFAULT_RAMP_INCR);
 			delay(1000);
 		}
 
 		if (errorStatus == 0) {
 			//	Start moving forward again
-			errorStatus = setGearMotorSpeed(&leftGearMotorM2, 50, 0, true);
+			errorStatus = setGearMotorSpeed(address, &leftGearMotorM2, ROVER_DEFAULT_MOVE_SPEED, ROVER_DEFAULT_RAMP_INCR);
 		}
 
 		if (errorStatus != 0) {
@@ -1938,26 +1978,26 @@ uint16_t turnToFarthestObject (DistanceObject *distObj, Servo *pan) {
 		}
 	} else {
 		//	Backup and scan again
-		stopGearMotors(&rightGearMotorM1, &leftGearMotorM2);
+		stopGearMotors(address, rightM1, leftM2);
 
-		errorStatus = setGearMotorSpeed(&rightGearMotorM1, -50, 0, false);
+		errorStatus = setGearMotorSpeed(address, rightM1, -ROVER_DEFAULT_MOVE_SPEED, ROVER_DEFAULT_RAMP_INCR);
 
 		if (errorStatus == 0) {
-			errorStatus = setGearMotorSpeed(&leftGearMotorM2, -50, 0, true);
+			errorStatus = setGearMotorSpeed(address, &leftGearMotorM2, -ROVER_DEFAULT_MOVE_SPEED, ROVER_DEFAULT_RAMP_INCR);
 			delay(1000);
 
-			stopGearMotors(&rightGearMotorM1, &leftGearMotorM2);
+			stopGearMotors(address, &rightGearMotorM1, &leftGearMotorM2);
 		} else {
 			processError(errorStatus, F("There was a problem backing up"));
 		}
 
 		if (errorStatus == 0) {
-			errorStatus = stopGearMotors(&rightGearMotorM1, &leftGearMotorM2);
+			errorStatus = stopGearMotors(address, &rightGearMotorM1, &leftGearMotorM2);
 
 			if (errorStatus != 0) {
 				runAwayRobot(errorStatus);
 			} else {
-				errorStatus = scanArea(pan, -90, 90, 10);
+				errorStatus = scanArea(address, pan, ROVER_DEFAULT_SCAN_START_DEG, ROVER_DEFAULT_SCAN_END_DEG, ROVER_DEFAULT_SCAN_INCR_DEG);
 
 				if (errorStatus != 0) {
 					processError(errorStatus, F("There was a problem with the area scan"));
@@ -2357,12 +2397,12 @@ void setup (void) {
 
 			//	Start the motors, forward
 			console.println(F("Starting the motors, forward"));
-			errorStatus = setGearMotorSpeed(&rightGearMotorM1, 50, 0, false);
+			errorStatus = setGearMotorSpeed(roboClawAddress1,&rightGearMotorM1, 50, 0);
 
 			if (errorStatus != 0) {
 				processError(errorStatus, F("Could not set speed for the LEFT motor"));
 			} else {
-				errorStatus = setGearMotorSpeed(&leftGearMotorM2, 50, 0, true);
+				errorStatus = setGearMotorSpeed(roboClawAddress1, &leftGearMotorM2, 50, 0);
 
 				if (errorStatus != 0) {
 					processError(errorStatus, F("Could not set speed for the RIGHT motor"));
@@ -2370,7 +2410,7 @@ void setup (void) {
 					delay(5000);
 
 					//	Stop the motors
-					errorStatus = stopGearMotors(&rightGearMotorM1, &leftGearMotorM2);
+					errorStatus = stopGearMotors(roboClawAddress1, &rightGearMotorM1, &leftGearMotorM2);
 
 					if (errorStatus != 0) {
 						runAwayRobot(errorStatus);
@@ -2383,12 +2423,12 @@ void setup (void) {
 			} else {
 				//	Start the motors, reverse
 				console.println(F("Starting the motors, reverse"));
-				errorStatus = setGearMotorSpeed(&rightGearMotorM1, -50, 0, false);
+				errorStatus = setGearMotorSpeed(roboClawAddress1, &rightGearMotorM1, -50, 0);
 
 				if (errorStatus != 0) {
 					processError(errorStatus, "Could not set speed for the " + rightGearMotorM1.descr + " motor");
 				} else {
-					errorStatus = setGearMotorSpeed(&leftGearMotorM2, -50, 0, true);
+					errorStatus = setGearMotorSpeed(roboClawAddress1, &leftGearMotorM2, -50, 0);
 
 					if (errorStatus != 0) {
 						processError(errorStatus, "Could not set speed for the " + leftGearMotorM2.descr + " motor");
@@ -2396,7 +2436,7 @@ void setup (void) {
 						delay(5000);
 
 						//	Stop the motors
-						errorStatus = stopGearMotors(&rightGearMotorM1, &leftGearMotorM2);
+						errorStatus = stopGearMotors(roboClawAddress1, &rightGearMotorM1, &leftGearMotorM2);
 
 						if (errorStatus != 0) {
 							runAwayRobot(errorStatus);
@@ -2414,7 +2454,7 @@ void setup (void) {
 		processError(errorStatus, F("Could not calibrate and test the motors"));
 	} else if (DOING_MOTOR_CALIBRATION) {
 		delay(2000);
-		errorStatus = stopGearMotors(&rightGearMotorM1, &leftGearMotorM2);
+		errorStatus = stopGearMotors(roboClawAddress1, &rightGearMotorM1, &leftGearMotorM2);
 
 		if (errorStatus != 0) {
 			runAwayRobot(errorStatus);
@@ -2423,12 +2463,12 @@ void setup (void) {
 			loopCount = 0;
 
 			while ((errorStatus == 0) && (loopCount < 10)) {
-				errorStatus = setGearMotorSpeed(&rightGearMotorM1, 50, 0, false);
+				errorStatus = setGearMotorSpeed(roboClawAddress1, &rightGearMotorM1, 50, 0);
 
 				if (errorStatus != 0) {
 					processError(errorStatus, "Could not start the " + rightGearMotorM1.descr + " motor");
 				} else {
-					errorStatus = setGearMotorSpeed(&leftGearMotorM2, 50, 0, true);
+					errorStatus = setGearMotorSpeed(roboClawAddress1, &leftGearMotorM2, 50, 0);
 
 					if (errorStatus != 0) {
 						processError(errorStatus, "Could not start the " + leftGearMotorM2.descr + " motor");
@@ -2438,14 +2478,15 @@ void setup (void) {
 
 					delay(3000);
 
-					errorStatus = stopGearMotors(&rightGearMotorM1, &leftGearMotorM2);
+					errorStatus = stopGearMotors(roboClawAddress1, &rightGearMotorM1, &leftGearMotorM2);
 
 					if (errorStatus != 0) {
 						runAwayRobot(errorStatus);
 					} else {
 						delay(3000);
 						loopCount++;
-					}					}
+					}
+				}
 			}
 			
 			console.println();
@@ -2462,7 +2503,7 @@ void setup (void) {
 	} else {
 		//	Scan the entire 180 degree range and take readings
 		console.println(F("Doing initial area scan.."));
-		errorStatus = scanArea(&mainPan, -90, 90, 10);
+		errorStatus = scanArea(roboClawAddress1, &mainPan, ROVER_DEFAULT_SCAN_START_DEG, ROVER_DEFAULT_SCAN_END_DEG, ROVER_DEFAULT_SCAN_INCR_DEG);
 
 		if (errorStatus != 0) {
 			processError(errorStatus, F("Could not complete the initial area scan"));
@@ -2523,8 +2564,8 @@ void loop (void) {
 	}
 
 	//	Start our motors at a reasonable speed.
-	setGearMotorSpeed(&rightGearMotorM1, 50, false);
-	setGearMotorSpeed(&leftGearMotorM2, 50, true);
+	setGearMotorSpeed(roboClawAddress1, &rightGearMotorM1, 50);
+	setGearMotorSpeed(roboClawAddress1, &leftGearMotorM2, 50);
 
 	//  Display the date.
 	if (displayDate && DISPLAY_INFORMATION && HAVE_7SEGMENT_DISPLAYS) {
@@ -2646,14 +2687,14 @@ void loop (void) {
 
 	//	Let's see if we're too close to an object.. If so, stop and scan the area
 	if ((ping[PING_FRONT_CENTER] < PING_MIN_DISTANCE_CM) || (ir[IR_FRONT_CENTER] < IR_MIN_DISTANCE_CM)) {
-		errorStatus = stopGearMotors(&rightGearMotorM1, &leftGearMotorM2);
+		errorStatus = stopGearMotors(roboClawAddress1, &rightGearMotorM1, &leftGearMotorM2);
 
 		if (errorStatus != 0) {
 			runAwayRobot(errorStatus);
 		}
 
 		//	Scan the area for a clear path
-		errorStatus = scanArea(&mainPan, -90, 90, 10);
+		errorStatus = scanArea(roboClawAddress1, &mainPan, -90, 90, 10);
 
 		if (errorStatus != 0) {
 			processError(errorStatus, F("Unable to scan the area"));
@@ -2661,12 +2702,12 @@ void loop (void) {
 			//	Find the closest and farthest objects
 			distObject = findDistanceObjects();
 
-			errorStatus = turnToFarthestObject(&distObject, &mainPan);
+			errorStatus = turnToFarthestObject(roboClawAddress1, &rightGearMotorM1, &leftGearMotorM2, &distObject, &mainPan);
 
 			if (errorStatus != 0) {
 				processError(errorStatus, F("Could not complete a turn to the farthest object"));
 
-				errorStatus = stopGearMotors(&rightGearMotorM1, &leftGearMotorM2);
+				errorStatus = stopGearMotors(roboClawAddress1, &rightGearMotorM1, &leftGearMotorM2);
 
 				if (errorStatus != 0) {
 					runAwayRobot(errorStatus);
