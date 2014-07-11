@@ -90,18 +90,22 @@
 //	Hardware Serial0: Console and Debug port
 #define	SERIAL_CONSOLE_RX_PIN			0
 #define	SERIAL_CONSOLE_TX_PIN			1
+#define SERIAL_CONSOLE_SPEED			9600
 
 //	Serial1: RoboClaw 2x5 Motor Controller
 #define	SERIAL_ROBOCLAW_RX_PIN			19
 #define	SERIAL_ROBOCLAW_TX_PIN			18
+#define SERIAL_ROBOCLAW_SPEED			38400
 
 //	Serial2: SSC-32 Servo Controller
-#define	SERIAL_SSC32_RX_PIN				17
-#define	SERIAL_SSC32_TX_PIN				16
+#define	SERIAL_XBEE_RX_PIN				17
+#define	SERIAL_XBEE_TX_PIN				16
+#define SERIAL_XBEE_SPEED				115200
 
 //	Serial3: XBee Wireless Mesh Networking
-#define	SERIAL_XBEE_RX_PIN				15
-#define	SERIAL_XBEE_TX_PIN				14
+#define	SERIAL_SSC32_RX_PIN				15
+#define	SERIAL_SSC32_TX_PIN				14
+#define SERIAL_SSC32_SPEED				115200
 
 //	Software Serial: RoboClaw 2x5 Motor Controllers
 #define	SERIAL_RESERVED_RX_PIN			21
@@ -129,7 +133,7 @@
 #define	MAX_NUMBER_AREA_READINGS		36
 
 //	Parallax PING Untrasonic sensors
-#define	MAX_NUMBER_PING					3
+#define	MAX_NUMBER_PING					1
 #define	PING_PIN_BASE					24			//	Digital 24
 #define	PING_MIN_DISTANCE_CM			10.0 		//	In CM, which is approximately 4"
 

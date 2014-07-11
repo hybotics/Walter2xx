@@ -2323,7 +2323,7 @@ void setup (void) {
 	lastRoutine = String(F("SETUP"));
 
 	//  Initialize the console port
-	console.begin(9600);
+	console.begin(SERIAL_CONSOLE_SPEED);
 	announce(&console);
 
 	//	Delay for a few seconds, before starting initialization
@@ -2334,10 +2334,10 @@ void setup (void) {
 	console.println(F("Initializing Serial Ports.."));
 
 	//	Initialize the SSC-32 servo controller port
-	ssc32.begin(115200);
+	ssc32.begin(SERIAL_SSC32_SPEED);
 
 	//	Initialize the XBee (ZigBee) Mesh Wireless port
-	xbee.begin(115200);
+	xbee.begin(SERIAL_XBEE_SPEED);
 	announce(&xbee);
 
 	console.println(F("Initializing Digital Pins.."));
@@ -2694,7 +2694,7 @@ void loop (void) {
 		}
 
 		//	Scan the area for a clear path
-		errorStatus = scanArea(roboClawAddress1, &mainPan, -90, 90, 10);
+		errorStatus = scanArea(roboClawAddress1, &mainPan, -ROVER_DEFAULT_SCAN_START_DEG, ROVER_DEFAULT_SCAN_END_DEG, ROVER_DEFAULT_SCAN_INCR_DEG);
 
 		if (errorStatus != 0) {
 			processError(errorStatus, F("Unable to scan the area"));
