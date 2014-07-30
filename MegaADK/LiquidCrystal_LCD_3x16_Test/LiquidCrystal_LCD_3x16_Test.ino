@@ -22,7 +22,7 @@ void setup() {
   // END DOG-M 
 
   //lcd.begin(16, 3);        // columns, rows.  use 16,3 for a 16x3 LCD
-  lcd.begin(16, 2);           // columns, rows.  use 16,2 for a 16x2 LCD
+  lcd.begin(16, 3);           // columns, rows.  use 16,2 for a 16x2 LCD
   lcd.clear();                  
   lcd.setCursor(0, 0);           
   lcd.print("Hybrid Robotics");   
@@ -30,8 +30,8 @@ void setup() {
   lcd.print("elapsed : ");
 
   // some extra data for 3 line LCD...
-  //lcd.setCursor(0, 2);           // set cursor to column 0, row 0 (the first row) 
-  //lcd.print("3 line LCD!");     // change this text to whatever you like. keep it clean.
+  lcd.setCursor(0, 2);           // set cursor to column 0, row 0 (the first row) 
+  lcd.print("W.A.L.T.E.R. 2.0");     // change this text to whatever you like. keep it clean.
 }
 
 // main program loop...

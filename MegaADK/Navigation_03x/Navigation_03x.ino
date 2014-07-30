@@ -1,6 +1,6 @@
 /*
 	Program:    	W.A.L.T.E.R., Navigation_03x - Master Control Program (MCP) sketch
-	Date:       	01-Jul-2014
+	Date:       	20-Jul-2014
 	Version:    	0.3.1 ALPHA
 
 	Platform:		Arduino Mega 2560 ADK,
@@ -1434,6 +1434,7 @@ void initRoboClaw (uint8_t address, uint16_t bps, GearMotor *rightGM1, GearMotor
 
 	//	For Packet Serial modes
 	rightGM1->descr = ROBOCLAW_MOTOR_RIGHT_NAME;
+	rightGM1->location = Right;
 	rightGM1->encoder = 0;
 	rightGM1->encoderStatus = 0;
 	rightGM1->encoderValid = false;
@@ -1446,6 +1447,7 @@ void initRoboClaw (uint8_t address, uint16_t bps, GearMotor *rightGM1, GearMotor
 
 	//	For Packet Serial modes
 	leftGM2->descr = ROBOCLAW_MOTOR_LEFT_NAME;
+	leftGM2->location = Left;
 	leftGM2->encoder = 0;
 	leftGM2->encoderStatus = 0;
 	leftGM2->encoderValid = false;
@@ -2397,7 +2399,7 @@ void setup (void) {
 
 			//	Start the motors, forward
 			console.println(F("Starting the motors, forward"));
-			errorStatus = setGearMotorSpeed(roboClawAddress1,&rightGearMotorM1, 50, 0);
+			errorStatus = setGearMotorSpeed(roboClawAddress1, &rightGearMotorM1, 50, 0);
 
 			if (errorStatus != 0) {
 				processError(errorStatus, F("Could not set speed for the LEFT motor"));

@@ -1,6 +1,6 @@
 /*
 	Program: 	W.A.L.T.E.R. 2.0, Navigation_03x.h - Navigation Control Program sketch header file
-	Date:		01-Jul-2014
+	Date:		20-Jul-2014
 	Version:	0.3.1 ALPHA
 
 	Platform:	Arduino Mega 2560 ADK,
@@ -26,7 +26,7 @@
 #define	I2C_SLAVE_ADDRESS				0x50
 
 #define	BUILD_VERSION					"0.3.1"
-#define	BUILD_DATE 						"01-Jul-2014"
+#define	BUILD_DATE 						"20-Jul-2014"
 #define	BUILD_BOARD						"Arduino Mega 2560 ADK and Lynxmotion's SSC-32"
 
 #define	LOOP_DELAY_SECONDS				10
@@ -159,6 +159,14 @@
 #define	IR_FRONT_LEFT					1
 #define	IR_FRONT_RIGHT					2
 #define	IR_BACK_RIGHT					3
+
+//	Dagu IR Compound Eye Sensor
+#define IR_EYE_LEFT_PIN					11					
+#define IR_EYE_RIGHT_PIN				12
+#define IR_EYE_UP_PIN					13
+#define IR_EYE_DOWN_PIN					14
+
+#define IR_EYE_LEDS_PIN					52
 
 //	RoboClaw 2x5 Motor Controller Packet Serial constants
 #define	ROBOCLAW_CONTROLLERS			1
